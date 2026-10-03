@@ -1,0 +1,44 @@
+services:
+  # Backend NestJS REST API
+  - type: web
+    name: jsnl-consumos-api
+    runtime: node
+    region: oregon
+    plan: free
+    buildCommand: npm install --include=dev && npm run build
+    startCommand: npm run migration:run:prod && npm run start:prod
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: jsnl-consumos-db
+          property: connectionString
+      - key: JWT_SECRET
+        generateValue: true
+      - key: PORT
+        value: "10000"
+      - key: NODE_ENV
+        value: production
+
+  # Frontend Web React (Vite)
+  - type: web
+    name: jsnl-consumos-web
+    runtime: static
+    rootDir: apps/web
+    region: oregon
+    plan: free
+    buildCommand: npm install && npm run build
+    staticPublishPath: ./dist
+    envVars:
+      - key: VITE_API_URL
+        fromService:
+          type: web
+          name: jsnl-consumos-api
+          property: url
+
+databases:
+  # PostgreSQL Managed Database (Plan Gratis)
+  - name: jsnl-consumos-db
+    databaseName: consumos_app
+    user: admin_tacural
+    region: oregon
+    plan: free
