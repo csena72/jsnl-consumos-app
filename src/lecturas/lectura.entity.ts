@@ -3,6 +3,12 @@ import { LoteSincronizacion } from '../lotes/lote-sincronizacion.entity';
 import { Medidor } from '../medidores/medidor.entity';
 import { Usuario } from '../usuarios/usuario.entity';
 
+export enum EstadoRevision {
+  PENDIENTE = 'PENDIENTE',
+  APROBADA = 'APROBADA',
+  RECHAZADA = 'RECHAZADA',
+}
+
 export const decimalTransformer = {
   to: (value: number | null | undefined): number | null | undefined => value,
   from: (value: string | null): number | null => (value === null ? null : parseFloat(value)),
@@ -74,6 +80,15 @@ export class Lectura {
 
   @Column({ name: 'es_atipico', type: 'boolean', default: false })
   esAtipico: boolean;
+
+  /** Solo es relevante cuando esAtipico = true: decisión manual del administrador. */
+  @Column({
+    name: 'estado_revision',
+    type: 'enum',
+    enum: EstadoRevision,
+    default: EstadoRevision.PENDIENTE,
+  })
+  estadoRevision: EstadoRevision;
 
   @Column({ name: 'fotografia_url', type: 'varchar', nullable: true })
   fotografiaUrl: string | null;

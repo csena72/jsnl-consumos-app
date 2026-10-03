@@ -33,7 +33,17 @@
 
 ---
 
-## 3. Consola Web Administrativa (`/api/admin`)
-* `GET /api/admin/dashboard/resumen`: Totales procesados y cantidad de lecturas atípicas.
-* `GET /api/admin/lecturas/atipicas`: Listado filtrado de lecturas con desvío > 40%.
-* `PATCH /api/admin/lecturas/:id/aprobar`: Validación manual de lectura con desvío.
+## 3. Consola Web Administrativa
+Todos requieren `Authorization: Bearer <JWT>` y rol `ADMIN`. Documentación interactiva en `/api/docs`.
+
+### Lecturas (`/api/lecturas`)
+* `GET /api/lecturas/resumen?periodo=AAAAMM`: lotes procesados y totales de lecturas atípicas (pendientes/aprobadas/rechazadas). `periodo` es opcional.
+* `GET /api/lecturas/atipicas?estado=PENDIENTE|APROBADA|RECHAZADA`: lecturas con desvío > 40%, con socio, medidor, operario y `fotografiaUrl`.
+* `PATCH /api/lecturas/:id/aprobar`: body opcional `{ "comentario": "..." }`. 400 si no es atípica, 409 si ya fue revisada.
+* `PATCH /api/lecturas/:id/rechazar`: ídem; la lectura queda fuera de la facturación.
+* `GET /api/lecturas/exportar?periodo=AAAAMM`: CSV (UTF-8 con BOM) para facturación. Excluye rechazadas y atípicas sin aprobar.
+* `POST /api/lecturas/:id/evidencia` (ADMIN u OPERARIO): `multipart/form-data`, campo `foto` (JPG/PNG, máx. 5 MB). Las fotos se sirven en `/uploads/<archivo>`.
+
+### Reclamos (`/api/reclamos`)
+* `GET /api/reclamos?estado=PENDIENTE|EN_REVISION|RESUELTO`: más recientes primero, con socio, lectura y `fotoEvidenciaUrl`.
+* `PATCH /api/reclamos/:id/estado`: body `{ "estado": "EN_REVISION" }`.
