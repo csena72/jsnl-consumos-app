@@ -1,11 +1,17 @@
 import * as SQLite from 'expo-sqlite';
+import { Platform } from 'react-native';
 
 const DB_NAME = 'consumos_local.db';
 
-let dbPromise: Promise<SQLite.SQLiteDatabase> | null = null;
+/**
+ * La conexión se guarda en globalThis para sobrevivir al Fast Refresh: en web, si el módulo
+ * se recarga y abre otra conexión, el archivo (OPFS) sigue tomado por la anterior y falla.
+ */
+const globalConDb = globalThis as typeof globalThis & {
+  __consumosDb?: Promise<SQLite.SQLiteDatabase> | null;
+};
 
 const SCHEMA = `
-  PRAGMA journal_mode = WAL;
   PRAGMA foreign_keys = ON;
 
   CREATE TABLE IF NOT EXISTS usuarios_session (
@@ -58,15 +64,19 @@ const SCHEMA = `
 
 /** Abre (una sola vez) la base local y crea las tablas si no existen. */
 export function getDb(): Promise<SQLite.SQLiteDatabase> {
-  if (!dbPromise) {
-    dbPromise = (async () => {
+  if (!globalConDb.__consumosDb) {
+    globalConDb.__consumosDb = (async () => {
       const db = await SQLite.openDatabaseAsync(DB_NAME);
+      // WAL no es compatible con el almacenamiento OPFS de web.
+      if (Platform.OS !== 'web') {
+        await db.execAsync('PRAGMA journal_mode = WAL;');
+      }
       await db.execAsync(SCHEMA);
       return db;
     })().catch((error: unknown) => {
-      dbPromise = null;
+      globalConDb.__consumosDb = null;
       throw error;
     });
   }
-  return dbPromise;
+  return globalConDb.__consumosDb;
 }

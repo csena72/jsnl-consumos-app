@@ -20,7 +20,9 @@
       "predictiveBackGestureEnabled": false,
       "package": "com.tacural.consumos",
       "permissions": [
-        "CAMERA"
+        "android.permission.CAMERA",
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO"
       ]
     },
     "web": {
@@ -41,6 +43,11 @@
           "photosPermission": "Se usa la galería para adjuntar fotos de medidores."
         }
       ]
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "a08fc45b-cd22-41e2-b4e9-b4e61e072e9d"
+      }
+    }
   }
 }
