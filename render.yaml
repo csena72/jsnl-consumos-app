@@ -24,8 +24,6 @@ services:
     name: jsnl-consumos-web
     runtime: static
     rootDir: apps/web
-    region: oregon
-    plan: free
     buildCommand: npm install && npm run build
     staticPublishPath: ./dist
     routes:
@@ -34,11 +32,11 @@ services:
         source: /*
         destination: /index.html
     envVars:
+      # Blueprints no pueden leer la URL pública de otro servicio (fromService solo expone
+      # host/port internos). Es la URL por defecto de Render para el servicio jsnl-consumos-api;
+      # si Render le asigna otro subdominio, actualizá este valor.
       - key: VITE_API_URL
-        fromService:
-          type: web
-          name: jsnl-consumos-api
-          property: url
+        value: https://jsnl-consumos-api.onrender.com
 
 databases:
   # PostgreSQL Managed Database (Plan Gratis)
