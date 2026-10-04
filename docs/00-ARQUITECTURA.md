@@ -9,7 +9,7 @@ El sistema resuelve la toma, validación y gestión de lecturas de consumos de s
 
 ## 2. Entornos y Rutas Relativas
 * **Repositorio Web + Backend API:** `./` (NestJS + React + PostgreSQL).
-* **Repositorio App Móvil:** `../consumos_app` (Flutter Offline-First).
+* **App Móvil:** `./apps/mobile` (React Native + Expo, Offline-First).
 * **Carpeta de Documentación:** `./docs/`
 * **Carpeta de Sprints:** `./sprints/`
 
@@ -19,5 +19,5 @@ El sistema resuelve la toma, validación y gestión de lecturas de consumos de s
 1. **Backend:** NestJS (TypeScript) con TypeORM.
 2. **Frontend Web:** React (TypeScript) + Vite + Tailwind CSS.
 3. **Base de Datos:** PostgreSQL (Docker Local en `./docker-compose.yml` / Cloud en Render.com).
-4. **App Móvil:** Flutter con SQFlite para persistencia offline local en `../consumos_app`.
+4. **App Móvil:** React Native (Expo + TypeScript) con `expo-sqlite` para persistencia offline local en `./apps/mobile`.
 5. **CI/CD & Hosting:** Render.com gestionado mediante `./render.yaml`.

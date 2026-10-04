@@ -27,3 +27,21 @@ export class ResumenLoteDto {
   @ApiProperty({ type: [LecturaProcesadaDto] }) alertasAtipicas: LecturaProcesadaDto[];
   @ApiProperty({ type: [LecturaRechazadaDto] }) rechazadas: LecturaRechazadaDto[];
 }
+
+export class RutaMedidorDto {
+  @ApiProperty({ format: 'uuid' }) medidorId: string;
+  @ApiProperty() numeroSerie: string;
+  @ApiProperty({ example: 'AGUA' }) tipoServicio: string;
+  @ApiProperty({ format: 'uuid' }) socioId: string;
+  @ApiProperty() numeroSocio: number;
+  @ApiProperty() nombreCompleto: string;
+  @ApiProperty() direccion: string;
+  @ApiProperty({ nullable: true, type: Number, description: 'Última lectura registrada' })
+  lecturaAnterior: number | null;
+  @ApiProperty({
+    nullable: true,
+    type: Number,
+    description: 'Consumo promedio entre lecturas consecutivas; null si no hay historial suficiente',
+  })
+  promedioHistorico: number | null;
+}

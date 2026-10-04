@@ -8,6 +8,8 @@
 ---
 
 ## 2. Sincronización Móvil (`/api/lecturas`)
+* `GET /api/lecturas/ruta` (ADMIN u OPERARIO): descarga los medidores activos para trabajar offline.
+  * **Response:** `[{ "medidorId", "numeroSerie", "tipoServicio", "socioId", "numeroSocio", "nombreCompleto", "direccion", "lecturaAnterior", "promedioHistorico" }]`. `promedioHistorico` es el consumo promedio entre lecturas consecutivas (`null` sin historial suficiente).
 * `POST /api/lecturas/sincronizar-lote`
   * **Headers:** `Authorization: Bearer <JWT>`
   * **Body Payload:**

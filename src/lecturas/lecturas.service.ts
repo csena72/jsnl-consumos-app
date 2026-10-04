@@ -20,6 +20,7 @@ import {
   LecturaProcesadaDto,
   LecturaRechazadaDto,
   ResumenLoteDto,
+  RutaMedidorDto,
 } from './dto/resumen-lote.dto';
 import { LecturaEntranteDto, SincronizarLoteDto } from './dto/sincronizar-lote.dto';
 import { EstadoRevision, Lectura } from './lectura.entity';
@@ -72,6 +73,43 @@ export class LecturasService {
         procesadas,
         alertasAtipicas,
         rechazadas,
+      };
+    });
+  }
+
+  /** Medidores activos con su última lectura y el consumo promedio entre lecturas consecutivas. */
+  async ruta(): Promise<RutaMedidorDto[]> {
+    const medidores = await this.dataSource.getRepository(Medidor).find({
+      where: { estado: EstadoMedidor.ACTIVO },
+      relations: { socio: true },
+      order: { socio: { numeroSocio: 'ASC' }, numeroSerie: 'ASC' },
+    });
+    const historial = await this.lecturas
+      .createQueryBuilder('l')
+      .select(['l.medidorId', 'l.valorLectura'])
+      .orderBy('l.periodo', 'ASC')
+      .addOrderBy('l.fechaCaptura', 'ASC')
+      .getMany();
+
+    const valoresPorMedidor = new Map<string, number[]>();
+    for (const { medidorId, valorLectura } of historial) {
+      valoresPorMedidor.set(medidorId, [...(valoresPorMedidor.get(medidorId) ?? []), valorLectura]);
+    }
+
+    return medidores.map((m) => {
+      const valores = valoresPorMedidor.get(m.id) ?? [];
+      const consumos = valores.slice(1).map((v, i) => v - valores[i]);
+      const promedio = consumos.length ? consumos.reduce((a, b) => a + b, 0) / consumos.length : null;
+      return {
+        medidorId: m.id,
+        numeroSerie: m.numeroSerie,
+        tipoServicio: m.tipoServicio,
+        socioId: m.socioId,
+        numeroSocio: m.socio.numeroSocio,
+        nombreCompleto: m.socio.nombreCompleto,
+        direccion: m.socio.direccionTacural,
+        lecturaAnterior: valores.length ? valores[valores.length - 1] : null,
+        promedioHistorico: promedio === null ? null : Math.round(promedio * 100) / 100,
       };
     });
   }

@@ -43,7 +43,7 @@ import {
   ResumenQueryDto,
   RevisionLecturaDto,
 } from './dto/lectura-admin.dto';
-import { ResumenLoteDto } from './dto/resumen-lote.dto';
+import { ResumenLoteDto, RutaMedidorDto } from './dto/resumen-lote.dto';
 import { SincronizarLoteDto } from './dto/sincronizar-lote.dto';
 import { LecturasService } from './lecturas.service';
 
@@ -73,6 +73,16 @@ export class LecturasController {
     @UsuarioActual() usuario: UsuarioAutenticado,
   ): Promise<ResumenLoteDto> {
     return this.lecturas.sincronizarLote(dto, usuario);
+  }
+
+  @Get('ruta')
+  @ApiOperation({
+    summary: 'Descargar la ruta de medidores activos para trabajar offline',
+    description: 'Incluye lectura anterior y consumo promedio histórico de cada medidor.',
+  })
+  @ApiResponse({ status: 200, type: [RutaMedidorDto] })
+  ruta(): Promise<RutaMedidorDto[]> {
+    return this.lecturas.ruta();
   }
 
   @Get('resumen')

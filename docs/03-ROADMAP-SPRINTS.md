@@ -18,7 +18,7 @@
   - [ ] Módulo de alertas de lecturas atípicas.
   - [ ] Módulo de reclamos con vista de fotos de evidencia.
 
-- [ ] **Sprint 4: Integración Móvil en Flutter (`../consumos_app`)**
+- [ ] **Sprint 4: App Móvil React Native/Expo (`./apps/mobile`)**
   - [ ] Cliente HTTP Dio en `../consumos_app` para conectar con la API NestJS.
   - [ ] Manejo de cola SQFlite offline y disparo de sincronización diferida.
 
