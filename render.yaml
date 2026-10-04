@@ -28,6 +28,11 @@ services:
     plan: free
     buildCommand: npm install && npm run build
     staticPublishPath: ./dist
+    routes:
+      # SPA: las rutas de React Router (/reclamos, /exportar) deben servir index.html
+      - type: rewrite
+        source: /*
+        destination: /index.html
     envVars:
       - key: VITE_API_URL
         fromService:
