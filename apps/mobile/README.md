@@ -126,3 +126,16 @@ netsh interface portproxy add v4tov4 listenport=3000 listenaddress=0.0.0.0 conne
 * El criterio de "atípico" local (consumo vs. promedio de consumos, solo al alza) difiere del servidor (valor de lectura vs. promedio de lecturas, en valor absoluto). La API es la que decide en el dashboard.
 * La API no es idempotente: si un lote llega pero se pierde la respuesta, el reintento puede duplicar lecturas.
 * Si el token vence, las lecturas sin enviar se conservan; otro usuario que inicie sesión en el mismo dispositivo las enviaría con su cuenta.
+
+## Generar el APK de Android (EAS Build)
+
+La URL de la API se define en `eas.json` (el `.env` no se sube a EAS). Cuenta gratuita en [expo.dev](https://expo.dev).
+
+```bash
+npm install -g eas-cli
+eas login
+cd apps/mobile
+eas build -p android --profile preview   # APK instalable directo (~15-20 min)
+```
+
+Al terminar, EAS entrega un link/QR: abrilo en el celular, descargá el APK e instalalo (permitir instalar de orígenes desconocidos). El perfil `production` genera un `.aab` para Google Play. Para cambiar de API, editá `EXPO_PUBLIC_API_URL` en `eas.json`.
