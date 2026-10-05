@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { borrarToken, guardarToken, obtenerToken, registrarSesionExpirada } from '../api/client';
-import { descargarRuta, login as loginApi } from '../api/endpoints';
+import { descargarLocalidades, descargarRuta, login as loginApi } from '../api/endpoints';
 import { reemplazarRuta, limpiarDatosLocales } from '../database/rutaRepository';
 import { borrarSesion, guardarSesion, obtenerSesion } from '../database/sessionRepository';
 import { contarPendientes } from '../database/lecturasRepository';
@@ -37,7 +37,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { access_token, user } = await loginApi(email, password);
     await guardarToken(access_token);
     try {
-      await reemplazarRuta(await descargarRuta());
+      await reemplazarRuta(await descargarRuta(), await descargarLocalidades());
     } catch (error) {
       await borrarToken();
       throw error;
@@ -47,14 +47,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const actualizarRuta = useCallback(async () => {
-    const ruta = await descargarRuta();
-    await reemplazarRuta(ruta);
+    const [ruta, localidades] = await Promise.all([descargarRuta(), descargarLocalidades()]);
+    await reemplazarRuta(ruta, localidades);
     return ruta.length;
   }, []);
 
   const cerrarSesion = useCallback(async (forzar = false) => {
-    const { lecturasPendientes, fotosPendientes } = await contarPendientes();
-    if (!forzar && (lecturasPendientes > 0 || fotosPendientes > 0)) return false;
+    const { lecturasPendientes, fotosPendientes, nuevosPendientes } = await contarPendientes();
+    if (!forzar && (lecturasPendientes > 0 || fotosPendientes > 0 || nuevosPendientes > 0)) return false;
     await borrarToken();
     await borrarSesion();
     await limpiarDatosLocales();

@@ -38,6 +38,7 @@ export class RutaMedidorDto {
   @ApiProperty() direccion: string;
   @ApiProperty({ nullable: true, type: String, description: 'Caja física del medidor' })
   numeroCaja: string | null;
+  @ApiProperty({ nullable: true, type: String, format: 'uuid' }) localidadId: string | null;
   @ApiProperty({ nullable: true, type: String }) localidad: string | null;
   @ApiProperty({ nullable: true, type: String }) ruta: string | null;
   @ApiProperty({

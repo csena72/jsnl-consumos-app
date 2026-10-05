@@ -5,12 +5,13 @@ import { Alert, FlatList, Pressable, StyleSheet, Text, View } from 'react-native
 import { mensajeDeError } from '../api/client';
 import { Button } from '../components/Button';
 import { Card } from '../components/Card';
+import { Chips } from '../components/Chips';
 import { colors } from '../components/theme';
 import { useAuth } from '../context/AuthContext';
 import { useSync } from '../context/SyncContext';
-import { listarRuta } from '../database/rutaRepository';
+import { listarLocalidades, listarRuta } from '../database/rutaRepository';
 import type { RootStackParamList } from '../navigation/types';
-import type { ItemRuta } from '../types';
+import { ETIQUETA_SERVICIO, type FiltroRuta, type ItemRuta, type LocalidadApi, type TipoServicio } from '../types';
 import { periodoActual } from '../utils/consumo';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'RutaLecturas'>;
@@ -21,11 +22,17 @@ export function RutaLecturasScreen({ navigation }: Props) {
   const [items, setItems] = useState<ItemRuta[]>([]);
   const [soloPendientes, setSoloPendientes] = useState(true);
   const [actualizando, setActualizando] = useState(false);
+  const [localidades, setLocalidades] = useState<LocalidadApi[]>([]);
+  const [localidadId, setLocalidadId] = useState<string | null>(null);
+  const [tipoServicio, setTipoServicio] = useState<TipoServicio | null>(null);
 
   const cargar = useCallback(async () => {
-    setItems(await listarRuta(periodoActual()));
+    const filtro: FiltroRuta = { localidadId, tipoServicio };
+    const [ruta, locs] = await Promise.all([listarRuta(periodoActual(), filtro), listarLocalidades()]);
+    setItems(ruta);
+    setLocalidades(locs);
     await refrescarContadores();
-  }, [refrescarContadores]);
+  }, [refrescarContadores, localidadId, tipoServicio]);
 
   useFocusEffect(
     useCallback(() => {
@@ -61,7 +68,7 @@ export function RutaLecturasScreen({ navigation }: Props) {
 
   const leidos = items.filter((i) => i.leido).length;
   const visibles = soloPendientes ? items.filter((i) => !i.leido) : items;
-  const pendientesDeEnvio = contadores.lecturasPendientes + contadores.fotosPendientes;
+  const pendientesDeEnvio = contadores.lecturasPendientes + contadores.fotosPendientes + contadores.nuevosPendientes;
 
   return (
     <View style={styles.container}>
@@ -83,6 +90,26 @@ export function RutaLecturasScreen({ navigation }: Props) {
         <View style={styles.accion}>
           <Button title="Actualizar ruta" variant="secondary" onPress={descargar} loading={actualizando} disabled={!red.conectado} />
         </View>
+      </View>
+
+      <View style={styles.selectores}>
+        <Text style={styles.etiqueta}>Pueblo / Localidad</Text>
+        <Chips
+          opciones={[{ valor: null, etiqueta: 'Todos' }, ...localidades.map((l) => ({ valor: l.id, etiqueta: l.nombre }))]}
+          seleccionado={localidadId}
+          onChange={setLocalidadId}
+        />
+        <Text style={styles.etiqueta}>Servicio</Text>
+        <Chips<TipoServicio | null>
+          opciones={[
+            { valor: null, etiqueta: 'Todos' },
+            { valor: 'ENERGIA', etiqueta: ETIQUETA_SERVICIO.ENERGIA },
+            { valor: 'AGUA', etiqueta: ETIQUETA_SERVICIO.AGUA },
+          ]}
+          seleccionado={tipoServicio}
+          onChange={setTipoServicio}
+        />
+        <Button title="+ Alta de medidor nuevo" variant="secondary" onPress={() => navigation.navigate('AltaMedidorNuevo')} />
       </View>
 
       <View style={styles.filtro}>
@@ -107,6 +134,7 @@ export function RutaLecturasScreen({ navigation }: Props) {
           <Pressable disabled={item.leido} onPress={() => navigation.navigate('CargarLectura', { idMedidor: item.idMedidor })}>
             <Card style={item.leido ? styles.cardLeida : undefined}>
               <View style={styles.fila}>
+                {item.ordenSecuencia !== null ? <Text style={styles.orden}>{item.ordenSecuencia}</Text> : null}
                 <Text style={styles.socio}>
                   #{item.numeroSocio} · {item.nombreSocio}
                 </Text>
@@ -114,7 +142,7 @@ export function RutaLecturasScreen({ navigation }: Props) {
               </View>
               <Text style={styles.dato}>{item.direccion}</Text>
               <Text style={styles.dato}>
-                Medidor {item.numeroMedidor} · Anterior: {item.lecturaAnterior ?? 'sin dato'}
+                {ETIQUETA_SERVICIO[item.tipoServicio]} · Caja {item.numeroCaja ?? 's/n'} · Medidor {item.numeroMedidor} · Anterior: {item.lecturaAnterior ?? 'sin dato'}
               </Text>
             </Card>
           </Pressable>
@@ -135,6 +163,9 @@ const styles = StyleSheet.create({
   progreso: { fontSize: 14, color: colors.muted },
   acciones: { flexDirection: 'row', gap: 8, paddingHorizontal: 16 },
   accion: { flex: 1 },
+  selectores: { paddingHorizontal: 16, paddingTop: 12, gap: 8 },
+  etiqueta: { fontSize: 12, fontWeight: '600', color: colors.muted },
+  orden: { fontSize: 16, fontWeight: '800', color: colors.primary, minWidth: 28 },
   filtro: { flexDirection: 'row', gap: 20, paddingHorizontal: 16, paddingTop: 16 },
   tab: { fontSize: 15, color: colors.muted, paddingBottom: 4 },
   tabActiva: { color: colors.primary, fontWeight: '700', borderBottomWidth: 2, borderBottomColor: colors.primary },

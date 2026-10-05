@@ -7,7 +7,8 @@ import { Card } from '../components/Card';
 import { colors } from '../components/theme';
 import { useSync } from '../context/SyncContext';
 import { listarRecientes } from '../database/lecturasRepository';
-import type { LecturaOffline } from '../types';
+import { listarNuevosRecientes } from '../database/medidoresNuevosRepository';
+import type { LecturaOffline, MedidorNuevoPendiente } from '../types';
 
 function etiqueta(l: LecturaOffline): { texto: string; color: string } {
   if (l.errorSync) return { texto: `Rechazada: ${l.errorSync}`, color: colors.danger };
@@ -19,9 +20,11 @@ function etiqueta(l: LecturaOffline): { texto: string; color: string } {
 export function SincronizacionScreen() {
   const { red, contadores, sincronizando, ultimoResultado, ultimoError, sincronizar, refrescarContadores } = useSync();
   const [lecturas, setLecturas] = useState<LecturaOffline[]>([]);
+  const [nuevos, setNuevos] = useState<MedidorNuevoPendiente[]>([]);
 
   const cargar = useCallback(async () => {
     setLecturas(await listarRecientes());
+    setNuevos(await listarNuevosRecientes());
     await refrescarContadores();
   }, [refrescarContadores]);
 
@@ -38,7 +41,7 @@ export function SincronizacionScreen() {
     if (!sincronizando) void cargar();
   }
 
-  const hayPendientes = contadores.lecturasPendientes + contadores.fotosPendientes > 0;
+  const hayPendientes = contadores.lecturasPendientes + contadores.fotosPendientes + contadores.nuevosPendientes > 0;
 
   return (
     <View style={styles.container}>
@@ -46,7 +49,7 @@ export function SincronizacionScreen() {
         <View style={styles.contadores}>
           <Contador valor={contadores.lecturasPendientes} titulo="Lecturas sin enviar" />
           <Contador valor={contadores.fotosPendientes} titulo="Fotos sin subir" />
-          <Contador valor={contadores.lotesPendientes} titulo="Lotes pendientes" />
+          <Contador valor={contadores.nuevosPendientes} titulo="Medidores nuevos sin enviar" />
         </View>
       </Card>
 
@@ -56,9 +59,9 @@ export function SincronizacionScreen() {
       {ultimoError ? <Banner tono="danger" titulo="Falló la sincronización" texto={ultimoError} /> : null}
       {ultimoResultado && !ultimoError ? (
         <Banner
-          tono={ultimoResultado.fotosFallidas || ultimoResultado.lecturasRechazadas ? 'warning' : 'success'}
+          tono={ultimoResultado.fotosFallidas || ultimoResultado.lecturasRechazadas || ultimoResultado.medidoresNuevosFallidos ? 'warning' : 'success'}
           titulo="Última sincronización"
-          texto={`${ultimoResultado.lecturasEnviadas} lecturas enviadas, ${ultimoResultado.lecturasRechazadas} rechazadas, ${ultimoResultado.fotosSubidas} fotos subidas, ${ultimoResultado.fotosFallidas} fotos fallidas.`}
+          texto={`${ultimoResultado.lecturasEnviadas} lecturas enviadas, ${ultimoResultado.lecturasRechazadas} rechazadas, ${ultimoResultado.fotosSubidas} fotos subidas, ${ultimoResultado.fotosFallidas} fotos fallidas, ${ultimoResultado.medidoresNuevosEnviados} medidores nuevos enviados, ${ultimoResultado.medidoresNuevosFallidos} medidores nuevos con error.`}
         />
       ) : null}
 
@@ -73,6 +76,28 @@ export function SincronizacionScreen() {
         data={lecturas}
         keyExtractor={(l) => String(l.id)}
         contentContainerStyle={styles.lista}
+        ListHeaderComponent={
+          nuevos.length > 0 ? (
+            <View style={styles.lista}>
+              {nuevos.map((n) => {
+                const color = n.errorSync ? colors.danger : n.sincronizado && n.fotoSubida ? colors.success : colors.warning;
+                const texto = n.errorSync
+                  ? `Rechazado: ${n.errorSync}`
+                  : n.sincronizado && n.fotoSubida
+                    ? 'Enviado · pendiente de aprobación'
+                    : n.sincronizado
+                      ? 'Enviado · foto pendiente'
+                      : 'Pendiente de envío';
+                return (
+                  <Card key={n.idLocal}>
+                    <Text style={styles.titulo}>Medidor nuevo {n.numeroSerie}</Text>
+                    <Text style={[styles.estado, { color }]}>{texto}</Text>
+                  </Card>
+                );
+              })}
+            </View>
+          ) : null
+        }
         ListEmptyComponent={<Text style={styles.vacio}>Todavía no cargaste lecturas.</Text>}
         renderItem={({ item }) => {
           const e = etiqueta(item);

@@ -58,6 +58,7 @@ export interface ContadoresSync {
   fotosPendientes: number;
   lotesPendientes: number;
   lecturasConError: number;
+  nuevosPendientes: number;
 }
 
 export async function contarPendientes(): Promise<ContadoresSync> {
@@ -68,9 +69,10 @@ export async function contarPendientes(): Promise<ContadoresSync> {
       (SELECT COUNT(*) FROM lecturas_offline
         WHERE estadoSync = 'SINCRONIZADO' AND idRemoto IS NOT NULL AND fotoPath IS NOT NULL AND fotoSubida = 0) AS fotosPendientes,
       (SELECT COUNT(*) FROM lotes_offline WHERE estado = 'PENDIENTE') AS lotesPendientes,
-      (SELECT COUNT(*) FROM lecturas_offline WHERE errorSync IS NOT NULL) AS lecturasConError
+      (SELECT COUNT(*) FROM lecturas_offline WHERE errorSync IS NOT NULL) AS lecturasConError,
+      (SELECT COUNT(*) FROM medidores_nuevos_pendientes WHERE (sincronizado = 0 OR fotoSubida = 0)) AS nuevosPendientes
   `);
-  return fila ?? { lecturasPendientes: 0, fotosPendientes: 0, lotesPendientes: 0, lecturasConError: 0 };
+  return fila ?? { lecturasPendientes: 0, fotosPendientes: 0, lotesPendientes: 0, lecturasConError: 0, nuevosPendientes: 0 };
 }
 
 export async function crearLote(): Promise<number> {

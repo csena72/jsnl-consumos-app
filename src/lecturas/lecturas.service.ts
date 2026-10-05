@@ -110,6 +110,7 @@ export class LecturasService {
         nombreCompleto: m.socio.nombreCompleto,
         direccion: m.socio.direccionTacural,
         numeroCaja: m.numeroCaja,
+        localidadId: m.localidadId ?? null,
         localidad: m.localidad?.nombre ?? null,
         ruta: m.ruta?.nombre ?? null,
         ordenSecuencia: m.ordenSecuencia,

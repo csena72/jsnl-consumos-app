@@ -25,7 +25,35 @@ const SCHEMA = `
     id TEXT PRIMARY KEY NOT NULL,
     numeroMedidor TEXT NOT NULL,
     lecturaAnterior REAL,
-    promedioHistorico REAL
+    promedioHistorico REAL,
+    tipoServicio TEXT NOT NULL DEFAULT 'ENERGIA' CHECK (tipoServicio IN ('ENERGIA', 'AGUA')),
+    numeroCaja TEXT,
+    localidadId TEXT,
+    rutaNombre TEXT,
+    ordenSecuencia INTEGER
+  );
+
+  CREATE TABLE IF NOT EXISTS localidades_local (
+    id TEXT PRIMARY KEY NOT NULL,
+    nombre TEXT NOT NULL
+  );
+
+  CREATE TABLE IF NOT EXISTS medidores_nuevos_pendientes (
+    id_local INTEGER PRIMARY KEY AUTOINCREMENT,
+    numeroSerie TEXT NOT NULL,
+    socioId TEXT,
+    tipoServicio TEXT NOT NULL CHECK (tipoServicio IN ('ENERGIA', 'AGUA')),
+    localidadId TEXT,
+    numeroCaja TEXT,
+    direccionReferencia TEXT,
+    lecturaInicial REAL,
+    observaciones TEXT,
+    fotoPathLocal TEXT NOT NULL,
+    fechaCreacion TEXT NOT NULL,
+    sincronizado INTEGER NOT NULL DEFAULT 0,
+    idRemoto TEXT,
+    fotoSubida INTEGER NOT NULL DEFAULT 0,
+    errorSync TEXT
   );
 
   CREATE TABLE IF NOT EXISTS socios_local (
@@ -62,6 +90,25 @@ const SCHEMA = `
   CREATE INDEX IF NOT EXISTS idx_lecturas_estado ON lecturas_offline(estadoSync);
 `;
 
+/** Columnas agregadas en el Sprint 6: las instalaciones previas tienen `medidores_local` sin ellas. */
+const COLUMNAS_SPRINT_6: { nombre: string; definicion: string }[] = [
+  { nombre: 'tipoServicio', definicion: "TEXT NOT NULL DEFAULT 'ENERGIA'" },
+  { nombre: 'numeroCaja', definicion: 'TEXT' },
+  { nombre: 'localidadId', definicion: 'TEXT' },
+  { nombre: 'rutaNombre', definicion: 'TEXT' },
+  { nombre: 'ordenSecuencia', definicion: 'INTEGER' },
+];
+
+async function migrar(db: SQLite.SQLiteDatabase): Promise<void> {
+  const columnas = await db.getAllAsync<{ name: string }>('PRAGMA table_info(medidores_local)');
+  const existentes = new Set(columnas.map((c) => c.name));
+  for (const c of COLUMNAS_SPRINT_6) {
+    if (!existentes.has(c.nombre)) {
+      await db.execAsync(`ALTER TABLE medidores_local ADD COLUMN ${c.nombre} ${c.definicion}`);
+    }
+  }
+}
+
 /** Abre (una sola vez) la base local y crea las tablas si no existen. */
 export function getDb(): Promise<SQLite.SQLiteDatabase> {
   if (!globalConDb.__consumosDb) {
@@ -71,7 +118,9 @@ export function getDb(): Promise<SQLite.SQLiteDatabase> {
       if (Platform.OS !== 'web') {
         await db.execAsync('PRAGMA journal_mode = WAL;');
       }
+      // Primero se migra lo existente y luego se crean las tablas nuevas.
       await db.execAsync(SCHEMA);
+      await migrar(db);
       return db;
     })().catch((error: unknown) => {
       globalConDb.__consumosDb = null;
