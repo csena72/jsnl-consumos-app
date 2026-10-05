@@ -3,8 +3,10 @@ import * as bcrypt from 'bcrypt';
 import { randomBytes } from 'node:crypto';
 import { DataSource } from 'typeorm';
 import { buildDataSourceOptions } from '../config/database.config';
+import { Localidad } from '../localidades/localidad.entity';
 import { Lectura } from '../lecturas/lectura.entity';
 import { EstadoMedidor, Medidor, TipoServicio } from '../medidores/medidor.entity';
+import { Ruta } from '../rutas/ruta.entity';
 import { CategoriaSocio, Socio } from '../socios/socio.entity';
 import { RolUsuario, Usuario } from '../usuarios/usuario.entity';
 
@@ -44,11 +46,18 @@ async function seed(): Promise<void> {
       if (usuario.rol === RolUsuario.OPERARIO) operarios.push(usuario);
     }
 
+    const localidad =
+      (await m.findOne(Localidad, { where: { nombre: 'Tacural' } })) ??
+      (await m.save(m.create(Localidad, { nombre: 'Tacural', provincia: 'Santa Fe', codigoPostal: '2301' })));
+    const ruta =
+      (await m.findOne(Ruta, { where: { localidadId: localidad.id, nombre: 'Ruta Centro' } })) ??
+      (await m.save(m.create(Ruta, { nombre: 'Ruta Centro', localidadId: localidad.id })));
+
     for (const [i, s] of SOCIOS.entries()) {
       const { base, ...datosSocio } = s;
       let socio = await m.findOne(Socio, { where: { numeroSocio: s.numeroSocio } });
       if (socio) continue;
-      socio = await m.save(m.create(Socio, datosSocio));
+      socio = await m.save(m.create(Socio, { ...datosSocio, localidadId: localidad.id }));
 
       const medidor = await m.save(
         m.create(Medidor, {
@@ -56,6 +65,10 @@ async function seed(): Promise<void> {
           socioId: socio.id,
           tipoServicio: TipoServicio.AGUA,
           estado: EstadoMedidor.ACTIVO,
+          numeroCaja: `A-${i + 1}`,
+          localidadId: localidad.id,
+          rutaId: ruta.id,
+          ordenSecuencia: i + 1,
         }),
       );
       const operario = operarios[i % operarios.length];

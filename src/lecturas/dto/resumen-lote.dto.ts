@@ -36,6 +36,16 @@ export class RutaMedidorDto {
   @ApiProperty() numeroSocio: number;
   @ApiProperty() nombreCompleto: string;
   @ApiProperty() direccion: string;
+  @ApiProperty({ nullable: true, type: String, description: 'Caja física del medidor' })
+  numeroCaja: string | null;
+  @ApiProperty({ nullable: true, type: String }) localidad: string | null;
+  @ApiProperty({ nullable: true, type: String }) ruta: string | null;
+  @ApiProperty({
+    nullable: true,
+    type: Number,
+    description: 'Posición en el recorrido de la ruta; la lista llega ya ordenada por ruta y secuencia',
+  })
+  ordenSecuencia: number | null;
   @ApiProperty({ nullable: true, type: Number, description: 'Última lectura registrada' })
   lecturaAnterior: number | null;
   @ApiProperty({

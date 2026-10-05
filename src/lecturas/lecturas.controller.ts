@@ -24,15 +24,12 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { Response } from 'express';
-import { randomUUID } from 'node:crypto';
-import { mkdirSync } from 'node:fs';
-import { join } from 'node:path';
-import { diskStorage } from 'multer';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { UsuarioActual } from '../auth/decorators/usuario-actual.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { UsuarioAutenticado } from '../auth/jwt-payload.interface';
+import { opcionesSubidaFoto, swaggerBodyFoto } from '../common/uploads';
 import { RolUsuario } from '../usuarios/usuario.entity';
 import {
   FiltroAtipicasDto,
@@ -46,10 +43,6 @@ import {
 import { ResumenLoteDto, RutaMedidorDto } from './dto/resumen-lote.dto';
 import { SincronizarLoteDto } from './dto/sincronizar-lote.dto';
 import { LecturasService } from './lecturas.service';
-
-export const UPLOADS_DIR = join(process.cwd(), 'uploads');
-const MIMES_PERMITIDOS = ['image/jpeg', 'image/png'];
-const TAMANO_MAXIMO_BYTES = 5 * 1024 * 1024;
 
 @ApiTags('Lecturas')
 @ApiBearerAuth()
@@ -150,38 +143,11 @@ export class LecturasController {
   @Post(':id/evidencia')
   @ApiOperation({ summary: 'Adjuntar la fotografía del medidor a una lectura' })
   @ApiConsumes('multipart/form-data')
-  @ApiBody({
-    schema: {
-      type: 'object',
-      required: ['foto'],
-      properties: { foto: { type: 'string', format: 'binary', description: 'JPG o PNG, máx. 5 MB' } },
-    },
-  })
+  @ApiBody(swaggerBodyFoto)
   @ApiResponse({ status: 201, description: 'Evidencia guardada' })
   @ApiResponse({ status: 400, description: 'Archivo ausente o formato no permitido' })
   @ApiResponse({ status: 404, description: 'Lectura no encontrada' })
-  @UseInterceptors(
-    FileInterceptor('foto', {
-      storage: diskStorage({
-        destination: (_req, _file, cb) => {
-          mkdirSync(UPLOADS_DIR, { recursive: true });
-          cb(null, UPLOADS_DIR);
-        },
-        filename: (_req, file, cb) => {
-          const ext = file.mimetype === 'image/png' ? '.png' : '.jpg';
-          cb(null, `${randomUUID()}${ext}`);
-        },
-      }),
-      limits: { fileSize: TAMANO_MAXIMO_BYTES },
-      fileFilter: (_req, file, cb) => {
-        if (MIMES_PERMITIDOS.includes(file.mimetype)) {
-          cb(null, true);
-        } else {
-          cb(new BadRequestException('Solo se aceptan imágenes JPG o PNG'), false);
-        }
-      },
-    }),
-  )
+  @UseInterceptors(FileInterceptor('foto', opcionesSubidaFoto))
   subirEvidencia(
     @Param('id', ParseUUIDPipe) id: string,
     @UploadedFile() foto: Express.Multer.File | undefined,

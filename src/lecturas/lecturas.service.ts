@@ -81,9 +81,10 @@ export class LecturasService {
   async ruta(): Promise<RutaMedidorDto[]> {
     const medidores = await this.dataSource.getRepository(Medidor).find({
       where: { estado: EstadoMedidor.ACTIVO },
-      relations: { socio: true },
+      relations: { socio: true, localidad: true, ruta: true },
       order: { socio: { numeroSocio: 'ASC' }, numeroSerie: 'ASC' },
     });
+    medidores.sort(porSecuenciaDeRuta);
     const historial = await this.lecturas
       .createQueryBuilder('l')
       .select(['l.medidorId', 'l.valorLectura'])
@@ -108,6 +109,10 @@ export class LecturasService {
         numeroSocio: m.socio.numeroSocio,
         nombreCompleto: m.socio.nombreCompleto,
         direccion: m.socio.direccionTacural,
+        numeroCaja: m.numeroCaja,
+        localidad: m.localidad?.nombre ?? null,
+        ruta: m.ruta?.nombre ?? null,
+        ordenSecuencia: m.ordenSecuencia,
         lecturaAnterior: valores.length ? valores[valores.length - 1] : null,
         promedioHistorico: promedio === null ? null : Math.round(promedio * 100) / 100,
       };
@@ -316,4 +321,14 @@ export class LecturasService {
       .getRawOne<{ promedio: string | null }>();
     return fila?.promedio == null ? null : Math.round(parseFloat(fila.promedio) * 100) / 100;
   }
+}
+
+/** Medidores con ruta primero (por localidad, ruta y secuencia); el resto conserva el orden por socio. */
+function porSecuenciaDeRuta(a: Medidor, b: Medidor): number {
+  if (!a.ruta || !b.ruta) return a.ruta ? -1 : b.ruta ? 1 : 0;
+  return (
+    (a.localidad?.nombre ?? '').localeCompare(b.localidad?.nombre ?? '') ||
+    a.ruta.nombre.localeCompare(b.ruta.nombre) ||
+    (a.ordenSecuencia ?? Infinity) - (b.ordenSecuencia ?? Infinity)
+  );
 }

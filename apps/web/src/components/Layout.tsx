@@ -3,7 +3,13 @@ import { useAuth } from '../auth';
 
 const links = [
   { to: '/', label: 'Dashboard', end: true },
+  { to: '/socios', label: 'Socios', end: false },
+  { to: '/medidores', label: 'Medidores', end: false },
+  { to: '/medidores-nuevos', label: 'Medidores nuevos', end: false },
+  { to: '/localidades', label: 'Localidades', end: false },
+  { to: '/rutas', label: 'Rutas', end: false },
   { to: '/reclamos', label: 'Reclamos', end: false },
+  { to: '/usuarios', label: 'Usuarios', end: false },
   { to: '/exportar', label: 'Exportar', end: false },
 ];
 
@@ -12,9 +18,9 @@ export function Layout() {
   return (
     <div className="min-h-screen">
       <header className="border-b border-slate-200 bg-white">
-        <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-6 gap-y-2 px-4 py-3">
+        <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-x-6 gap-y-2 px-4 py-3">
           <span className="font-semibold text-sky-700">Consumos · Tacural</span>
-          <nav className="flex gap-1">
+          <nav className="flex flex-wrap gap-1">
             {links.map((l) => (
               <NavLink
                 key={l.to}
@@ -36,7 +42,7 @@ export function Layout() {
           </div>
         </div>
       </header>
-      <main className="mx-auto max-w-6xl px-4 py-6">
+      <main className="mx-auto max-w-7xl px-4 py-6">
         <Outlet />
       </main>
     </div>

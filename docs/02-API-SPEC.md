@@ -47,5 +47,35 @@ Todos requieren `Authorization: Bearer <JWT>` y rol `ADMIN`. Documentación inte
 * `POST /api/lecturas/:id/evidencia` (ADMIN u OPERARIO): `multipart/form-data`, campo `foto` (JPG/PNG, máx. 5 MB). Las fotos se sirven en `/uploads/<archivo>`.
 
 ### Reclamos (`/api/reclamos`)
-* `GET /api/reclamos?estado=PENDIENTE|EN_REVISION|RESUELTO`: más recientes primero, con socio, lectura y `fotoEvidenciaUrl`.
-* `PATCH /api/reclamos/:id/estado`: body `{ "estado": "EN_REVISION" }`.
+* `GET /api/reclamos?estado=PENDIENTE|EN_PROCESO|RESUELTO&tipoReclamo=...&socioId=...`: más recientes primero, con socio, lectura y `fotoUrl`.
+* `GET /api/reclamos/:id`: detalle con `historial` de cambios de estado.
+* `POST /api/reclamos` (ADMIN u OPERARIO): `{ socioId, tipoReclamo, descripcion, lecturaId? }`. Queda `PENDIENTE`.
+* `PATCH /api/reclamos/:id/estado`: `{ "estado": "EN_PROCESO", "comentario"?: "..." }`. Registra el cambio en el historial; 400 si ya está en ese estado.
+* `POST /api/reclamos/:id/foto` (ADMIN u OPERARIO): `multipart/form-data`, campo `foto`.
+
+### Socios (`/api/socios`)
+* `GET /api/socios?q=&localidadId=&activo=&page=&limit=`: paginado `{ data, total, page, limit }`; `q` busca por DNI, N° de socio o nombre. Por defecto solo activos.
+* `GET /api/socios/:id`, `POST /api/socios`, `PATCH /api/socios/:id` (409 si N° de socio o DNI duplicado).
+* `DELETE /api/socios/:id`: baja lógica (también desactiva sus medidores). `PATCH /api/socios/:id/reactivar`.
+
+### Medidores (`/api/medidores`)
+* `GET /api/medidores?tipoServicio=ENERGIA|AGUA&socioId=&localidadId=&rutaId=&estado=&q=&page=&limit=`: paginado. Por defecto solo activos.
+* `GET/POST/PATCH /api/medidores/:id`: campos `numeroSerie`, `socioId`, `tipoServicio`, `numeroCaja`, `estadoPrecinto`, `localidadId`, `rutaId`, `ordenSecuencia`. 409 si el N° de serie está repetido o la caja ya está ocupada **para ese servicio**.
+* `DELETE /api/medidores/:id`: baja lógica (`INACTIVO`).
+
+### Localidades (`/api/localidades`)
+* `GET` (ADMIN u OPERARIO), `GET/:id`, `POST`, `PATCH /:id`, `DELETE /:id` (409 si tiene socios, medidores o rutas).
+
+### Rutas (`/api/rutas`)
+* `GET /api/rutas?localidadId=&activa=`, `GET /api/rutas/:id` (medidores en orden de lectura), `POST`, `PATCH /:id`, `DELETE /:id` (los medidores quedan sin ruta).
+* `PUT /api/rutas/:id/orden`: `{ "medidorIds": [...] }` define el conjunto y la secuencia física de lectura (`ordenSecuencia` = posición + 1).
+* `GET /api/lecturas/ruta` (usado por la app móvil) ahora incluye `numeroCaja`, `localidad`, `ruta` y `ordenSecuencia`, y llega ordenada por localidad, ruta y secuencia.
+
+### Medidores nuevos (`/api/medidores-nuevos`)
+* `POST` (ADMIN u OPERARIO): el operario reporta un medidor hallado en campo `{ numeroSerie, tipoServicio, numeroCaja?, estadoPrecinto?, localidadId?, direccionReferencia?, observaciones? }`; `POST /:id/foto` adjunta la foto.
+* `GET ?estado=PENDIENTE|APROBADO|RECHAZADO`, `GET /:id` (ADMIN).
+* `POST /:id/aprobar`: `{ socioId, localidadId?, rutaId?, ordenSecuencia?, numeroCaja?, estadoPrecinto? }` crea el medidor oficial vinculado al socio.
+* `POST /:id/rechazar`: `{ motivo }`. 409 si la solicitud ya fue revisada.
+
+### Usuarios (`/api/usuarios`)
+* `GET`, `GET /:id`, `POST { email, nombre, password, rol }`, `PATCH /:id` (nombre, email, rol, password, activo), `DELETE /:id` (baja lógica). Un administrador no puede darse de baja ni cambiarse el rol a sí mismo.

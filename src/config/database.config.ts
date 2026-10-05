@@ -1,12 +1,26 @@
 import { DataSourceOptions } from 'typeorm';
 import { LoteSincronizacion } from '../lotes/lote-sincronizacion.entity';
 import { Lectura } from '../lecturas/lectura.entity';
+import { Localidad } from '../localidades/localidad.entity';
 import { Medidor } from '../medidores/medidor.entity';
-import { Reclamo } from '../reclamos/reclamo.entity';
+import { MedidorPendienteAlta } from '../medidores-nuevos/medidor-pendiente-alta.entity';
+import { Reclamo, ReclamoHistorial } from '../reclamos/reclamo.entity';
+import { Ruta } from '../rutas/ruta.entity';
 import { Socio } from '../socios/socio.entity';
 import { Usuario } from '../usuarios/usuario.entity';
 
-export const entities = [Usuario, Socio, Medidor, LoteSincronizacion, Lectura, Reclamo];
+export const entities = [
+  Usuario,
+  Localidad,
+  Ruta,
+  Socio,
+  Medidor,
+  MedidorPendienteAlta,
+  LoteSincronizacion,
+  Lectura,
+  Reclamo,
+  ReclamoHistorial,
+];
 
 export function buildDataSourceOptions(env: NodeJS.ProcessEnv): DataSourceOptions {
   const url = env.DATABASE_URL;
