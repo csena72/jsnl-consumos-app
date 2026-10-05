@@ -27,6 +27,7 @@ describe('AuthService', () => {
       nombre: 'Op',
       rol: RolUsuario.OPERARIO,
       passwordHash: await bcrypt.hash('clave-correcta', 4),
+      activo: true,
     };
   });
 
@@ -46,6 +47,14 @@ describe('AuthService', () => {
   it('rechaza una contraseña incorrecta', async () => {
     encontrado = usuario;
     await assert.rejects(service.login({ email: usuario.email, password: 'mala' }), UnauthorizedException);
+  });
+
+  it('rechaza un usuario dado de baja aunque la contraseña sea correcta', async () => {
+    encontrado = { ...usuario, activo: false };
+    await assert.rejects(
+      service.login({ email: usuario.email, password: 'clave-correcta' }),
+      UnauthorizedException,
+    );
   });
 
   it('rechaza un usuario inexistente', async () => {
