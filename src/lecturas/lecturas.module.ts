@@ -11,6 +11,6 @@ import { LecturasService } from './lecturas.service';
   imports: [TypeOrmModule.forFeature([Lectura, Medidor, LoteSincronizacion]), AuthModule],
   controllers: [LecturasController],
   providers: [LecturasService],
-  exports: [TypeOrmModule],
+  exports: [TypeOrmModule, LecturasService],
 })
 export class LecturasModule {}

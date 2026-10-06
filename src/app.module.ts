@@ -1,6 +1,8 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { ServeStaticModule } from '@nestjs/serve-static';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { UPLOADS_DIR } from './common/uploads';
 import { buildDataSourceOptions } from './config/database.config';
 import { AuthModule } from './auth/auth.module';
 import { LecturasModule } from './lecturas/lecturas.module';
@@ -17,6 +19,12 @@ import { UsuariosModule } from './usuarios/usuarios.module';
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
     TypeOrmModule.forRoot(buildDataSourceOptions(process.env)),
+    // Fotos guardadas en disco: públicas en /uploads, fuera del prefijo /api.
+    ServeStaticModule.forRoot({
+      rootPath: UPLOADS_DIR,
+      serveRoot: '/uploads',
+      serveStaticOptions: { index: false, fallthrough: false, maxAge: '30d', immutable: true },
+    }),
     UsuariosModule,
     AuthModule,
     SociosModule,

@@ -5,13 +5,16 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { DataSource, EntityManager, Repository } from 'typeorm';
+import { DataSource, EntityManager, In, Repository } from 'typeorm';
 import { UsuarioAutenticado } from '../auth/jwt-payload.interface';
 import { EstadoLote, LoteSincronizacion } from '../lotes/lote-sincronizacion.entity';
 import { EstadoMedidor, Medidor } from '../medidores/medidor.entity';
+import { Ruta } from '../rutas/ruta.entity';
 import { RolUsuario } from '../usuarios/usuario.entity';
 import { calcularDesvio } from './desvio';
+import { RutaAsignadaDto } from '../rutas/dto/ruta.dto';
 import {
+  FiltroExportacion,
   LecturaAtipicaDto,
   LecturaRevisadaDto,
   ResumenDashboardDto,
@@ -77,17 +80,44 @@ export class LecturasService {
     });
   }
 
-  /** Medidores activos con su última lectura y el consumo promedio entre lecturas consecutivas. */
-  async ruta(): Promise<RutaMedidorDto[]> {
-    const medidores = await this.dataSource.getRepository(Medidor).find({
-      where: { estado: EstadoMedidor.ACTIVO },
-      relations: { socio: true, localidad: true, ruta: true },
-      order: { socio: { numeroSocio: 'ASC' }, numeroSerie: 'ASC' },
+  /**
+   * Rutas activas asignadas al operario, cada una con sus medidores activos en orden de
+   * caminata (ordenSecuencia ASC) y su historial de lecturas.
+   */
+  async rutasAsignadas(operarioId: string): Promise<RutaAsignadaDto[]> {
+    const rutas = await this.dataSource.getRepository(Ruta).find({
+      where: { operarioId, activa: true },
+      relations: { localidad: true },
+      order: { localidad: { nombre: 'ASC' }, nombre: 'ASC' },
     });
-    medidores.sort(porSecuenciaDeRuta);
+    const medidores = await this.medidoresConHistorial(rutas.map((r) => r.id));
+    return rutas.map((r) => ({
+      id: r.id,
+      nombre: r.nombre,
+      localidad: { id: r.localidad.id, nombre: r.localidad.nombre },
+      medidores: medidores.filter((m) => m.rutaId === r.id).map(({ rutaId: _rutaId, ...m }) => m),
+    }));
+  }
+
+  /** Versión plana de `rutasAsignadas` (GET /lecturas/ruta, compatible con apps anteriores). */
+  async ruta(operarioId: string): Promise<RutaMedidorDto[]> {
+    return (await this.rutasAsignadas(operarioId)).flatMap((r) => r.medidores);
+  }
+
+  private async medidoresConHistorial(
+    rutaIds: string[],
+  ): Promise<(RutaMedidorDto & { rutaId: string })[]> {
+    if (rutaIds.length === 0) return [];
+    const medidores = await this.dataSource.getRepository(Medidor).find({
+      where: { estado: EstadoMedidor.ACTIVO, rutaId: In(rutaIds) },
+      relations: { socio: true, localidad: true, ruta: true },
+      order: { ordenSecuencia: 'ASC', numeroSerie: 'ASC' },
+    });
+    if (medidores.length === 0) return [];
     const historial = await this.lecturas
       .createQueryBuilder('l')
       .select(['l.medidorId', 'l.valorLectura'])
+      .where('l.medidorId IN (:...ids)', { ids: medidores.map((m) => m.id) })
       .orderBy('l.periodo', 'ASC')
       .addOrderBy('l.fechaCaptura', 'ASC')
       .getMany();
@@ -102,6 +132,7 @@ export class LecturasService {
       const consumos = valores.slice(1).map((v, i) => v - valores[i]);
       const promedio = consumos.length ? consumos.reduce((a, b) => a + b, 0) / consumos.length : null;
       return {
+        rutaId: m.rutaId as string,
         medidorId: m.id,
         numeroSerie: m.numeroSerie,
         tipoServicio: m.tipoServicio,
@@ -199,19 +230,26 @@ export class LecturasService {
   }
 
   /**
-   * CSV para facturación del periodo. Excluye lecturas rechazadas y atípicas aún sin
-   * aprobar, para que nunca se facture un consumo dudoso.
+   * CSV del periodo según `filtro`:
+   * - PROCESADAS (por defecto, el insumo de facturación): excluye rechazadas y atípicas sin aprobar.
+   * - ATIPICAS: solo las lecturas con desvío > 40%, sea cual sea su estado de revisión.
+   * - TODAS: el padrón completo de lecturas del periodo.
    */
-  async exportarCsv(periodo: string): Promise<string> {
-    const lecturas = await this.lecturas
+  async exportarCsv(periodo: string, filtro: FiltroExportacion = FiltroExportacion.PROCESADAS): Promise<string> {
+    const qb = this.lecturas
       .createQueryBuilder('l')
       .innerJoinAndSelect('l.medidor', 'm')
       .innerJoinAndSelect('m.socio', 's')
-      .where('l.periodo = :periodo', { periodo })
-      .andWhere('l.estado_revision <> :rechazada', { rechazada: EstadoRevision.RECHAZADA })
-      .andWhere('(l.es_atipico = false OR l.estado_revision = :aprobada)', {
-        aprobada: EstadoRevision.APROBADA,
-      })
+      .where('l.periodo = :periodo', { periodo });
+    if (filtro === FiltroExportacion.ATIPICAS) {
+      qb.andWhere('l.es_atipico = true');
+    } else if (filtro === FiltroExportacion.PROCESADAS) {
+      qb.andWhere('l.estado_revision <> :rechazada', { rechazada: EstadoRevision.RECHAZADA }).andWhere(
+        '(l.es_atipico = false OR l.estado_revision = :aprobada)',
+        { aprobada: EstadoRevision.APROBADA },
+      );
+    }
+    const lecturas = await qb
       .orderBy('s.numero_socio', 'ASC')
       .addOrderBy('m.numero_serie', 'ASC')
       .getMany();
@@ -227,7 +265,8 @@ export class LecturasService {
         'valor_lectura',
         'promedio_historico',
         'desvio_porcentaje',
-        'atipica_aprobada',
+        'atipica',
+        'estado_revision',
         'fecha_captura',
         'observaciones',
       ],
@@ -242,6 +281,7 @@ export class LecturasService {
         l.promedioHistorico,
         l.desvioPorcentaje,
         l.esAtipico ? 'SI' : 'NO',
+        l.estadoRevision,
         l.fechaCaptura.toISOString(),
         l.observaciones,
       ]),
@@ -322,14 +362,4 @@ export class LecturasService {
       .getRawOne<{ promedio: string | null }>();
     return fila?.promedio == null ? null : Math.round(parseFloat(fila.promedio) * 100) / 100;
   }
-}
-
-/** Medidores con ruta primero (por localidad, ruta y secuencia); el resto conserva el orden por socio. */
-function porSecuenciaDeRuta(a: Medidor, b: Medidor): number {
-  if (!a.ruta || !b.ruta) return a.ruta ? -1 : b.ruta ? 1 : 0;
-  return (
-    (a.localidad?.nombre ?? '').localeCompare(b.localidad?.nombre ?? '') ||
-    a.ruta.nombre.localeCompare(b.ruta.nombre) ||
-    (a.ordenSecuencia ?? Infinity) - (b.ordenSecuencia ?? Infinity)
-  );
 }

@@ -34,6 +34,14 @@ export interface RutaMedidorApi {
   promedioHistorico: number | null;
 }
 
+/** Respuesta de GET /rutas/asignada: solo las rutas del usuario logueado, medidores por ordenSecuencia ASC. */
+export interface RutaAsignadaApi {
+  id: string;
+  nombre: string;
+  localidad: { id: string; nombre: string };
+  medidores: RutaMedidorApi[];
+}
+
 export interface SocioLocal {
   id: string;
   numeroSocio: number;

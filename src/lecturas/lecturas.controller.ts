@@ -32,10 +32,11 @@ import { UsuarioAutenticado } from '../auth/jwt-payload.interface';
 import { opcionesSubidaFoto, swaggerBodyFoto } from '../common/uploads';
 import { RolUsuario } from '../usuarios/usuario.entity';
 import {
+  ExportarQueryDto,
   FiltroAtipicasDto,
+  FiltroExportacion,
   LecturaAtipicaDto,
   LecturaRevisadaDto,
-  PeriodoQueryDto,
   ResumenDashboardDto,
   ResumenQueryDto,
   RevisionLecturaDto,
@@ -70,12 +71,13 @@ export class LecturasController {
 
   @Get('ruta')
   @ApiOperation({
-    summary: 'Descargar la ruta de medidores activos para trabajar offline',
-    description: 'Incluye lectura anterior y consumo promedio histórico de cada medidor.',
+    summary: 'Medidores de las rutas asignadas al usuario del token (lista plana)',
+    description:
+      'Equivale a GET /rutas/asignada aplanado: solo rutas del usuario, ordenadas por ordenSecuencia ASC.',
   })
   @ApiResponse({ status: 200, type: [RutaMedidorDto] })
-  ruta(): Promise<RutaMedidorDto[]> {
-    return this.lecturas.ruta();
+  ruta(@UsuarioActual() usuario: UsuarioAutenticado): Promise<RutaMedidorDto[]> {
+    return this.lecturas.ruta(usuario.id);
   }
 
   @Get('resumen')
@@ -97,18 +99,24 @@ export class LecturasController {
   @Get('exportar')
   @Roles(RolUsuario.ADMIN)
   @ApiOperation({
-    summary: 'Exportar el consolidado de un periodo en CSV para facturación',
-    description: 'Excluye lecturas rechazadas y atípicas sin aprobar.',
+    summary: 'Exportar lecturas de un periodo en CSV',
+    description:
+      'Parámetro filtro: TODAS (padrón completo), ATIPICAS (desvío > 40%) o PROCESADAS (validadas; default, ' +
+      'excluye rechazadas y atípicas sin aprobar).',
   })
   @ApiProduces('text/csv')
   @ApiResponse({ status: 200, description: 'Archivo CSV (UTF-8 con BOM)' })
   async exportar(
-    @Query() query: PeriodoQueryDto,
+    @Query() query: ExportarQueryDto,
     @Res({ passthrough: true }) res: Response,
   ): Promise<string> {
-    const csv = await this.lecturas.exportarCsv(query.periodo);
+    const filtro = query.filtro ?? FiltroExportacion.PROCESADAS;
+    const csv = await this.lecturas.exportarCsv(query.periodo, filtro);
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
-    res.setHeader('Content-Disposition', `attachment; filename="lecturas-${query.periodo}.csv"`);
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="lecturas-${filtro.toLowerCase()}-${query.periodo}.csv"`,
+    );
     return csv;
   }
 

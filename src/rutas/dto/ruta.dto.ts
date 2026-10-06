@@ -1,7 +1,8 @@
 import { ApiProperty, ApiPropertyOptional, OmitType, PartialType } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
-import { ArrayUnique, IsArray, IsBoolean, IsOptional, IsString, IsUUID, MaxLength, MinLength } from 'class-validator';
+import { ArrayUnique, IsArray, IsBoolean, IsOptional, IsString, IsUUID, MaxLength, MinLength, ValidateIf } from 'class-validator';
 import { aBooleano } from '../../common/paginacion';
+import { RutaMedidorDto } from '../../lecturas/dto/resumen-lote.dto';
 import { TipoServicio } from '../../medidores/medidor.entity';
 
 export class CrearRutaDto {
@@ -50,6 +51,18 @@ export class ReordenarRutaDto {
   medidorIds: string[];
 }
 
+export class AsignarRutaDto {
+  @ApiProperty({
+    format: 'uuid',
+    nullable: true,
+    type: String,
+    description: 'Operario responsable de la ruta; null la deja sin asignar',
+  })
+  @ValidateIf((o: AsignarRutaDto) => o.operarioId !== null)
+  @IsUUID()
+  operarioId: string | null;
+}
+
 class RefDto {
   @ApiProperty({ format: 'uuid' }) id: string;
   @ApiProperty() nombre: string;
@@ -60,6 +73,7 @@ export class RutaDto {
   @ApiProperty() nombre: string;
   @ApiProperty() activa: boolean;
   @ApiProperty({ type: RefDto }) localidad: RefDto;
+  @ApiProperty({ type: RefDto, nullable: true, description: 'Operario asignado' }) operario: RefDto | null;
   @ApiProperty() totalMedidores: number;
 }
 
@@ -77,4 +91,15 @@ export class RutaMedidorOrdenadoDto {
 export class RutaDetalleDto extends RutaDto {
   @ApiProperty({ type: [RutaMedidorOrdenadoDto], description: 'Ordenados por ordenSecuencia' })
   medidores: RutaMedidorOrdenadoDto[];
+}
+
+export class RutaAsignadaDto {
+  @ApiProperty({ format: 'uuid' }) id: string;
+  @ApiProperty() nombre: string;
+  @ApiProperty({ type: RefDto }) localidad: RefDto;
+  @ApiProperty({
+    type: [RutaMedidorDto],
+    description: 'Medidores activos de la ruta con su historial, ordenados por ordenSecuencia ASC',
+  })
+  medidores: RutaMedidorDto[];
 }

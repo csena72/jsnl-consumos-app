@@ -55,13 +55,13 @@ const SELECT_RUTA = `
   JOIN socios_local s ON s.idMedidor = m.id
 `;
 
-/** Recorrido en orden físico de caminata: los medidores sin secuencia van al final. */
+/** Recorrido en orden físico de caminata: por ruta y, dentro de cada una, estrictamente por ordenSecuencia. */
 export async function listarRuta(periodo: string, filtro: FiltroRuta): Promise<ItemRuta[]> {
   const db = await getDb();
   const filas = await db.getAllAsync<FilaRuta>(
     `${SELECT_RUTA}
      WHERE (? IS NULL OR m.localidadId = ?) AND (? IS NULL OR m.tipoServicio = ?)
-     ORDER BY m.ordenSecuencia IS NULL, m.ordenSecuencia, s.numeroSocio, m.numeroMedidor`,
+     ORDER BY localidadNombre, m.rutaNombre, m.ordenSecuencia IS NULL, m.ordenSecuencia, s.numeroSocio, m.numeroMedidor`,
     periodo,
     filtro.localidadId,
     filtro.localidadId,

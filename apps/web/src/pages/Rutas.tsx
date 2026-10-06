@@ -17,6 +17,7 @@ import type { Localidad, Medidor, Ruta, RutaDetalle, RutaMedidor } from '../type
 
 type Item = Pick<RutaMedidor, 'id' | 'numeroSerie' | 'tipoServicio' | 'numeroCaja' | 'numeroSocio' | 'nombreCompleto'>;
 const cargarLocalidades = () => api.localidades();
+const cargarUsuarios = () => api.usuarios();
 
 const aItem = (m: Medidor): Item => ({
   id: m.id,
@@ -62,6 +63,9 @@ export function Rutas() {
                   {!r.activa && <Badge tono="slate">Inactiva</Badge>}
                   <span className="block text-xs text-slate-500">
                     {r.localidad.nombre} · {r.totalMedidores} medidor{r.totalMedidores === 1 ? '' : 'es'}
+                  </span>
+                  <span className={`block text-xs ${r.operario ? 'text-slate-500' : 'text-amber-600'}`}>
+                    {r.operario ? `Operario: ${r.operario.nombre}` : 'Sin operario asignado'}
                   </span>
                 </button>
               </li>
@@ -118,6 +122,7 @@ function EditorRuta({
 }) {
   const cargar = useCallback(() => api.ruta(rutaId), [rutaId]);
   const { datos: ruta, error, recargar } = useCarga(cargar);
+  const usuarios = useCarga(cargarUsuarios);
   const [items, setItems] = useState<Item[]>([]);
   const [original, setOriginal] = useState<string[]>([]);
   const [accionError, setAccionError] = useState<string | null>(null);
@@ -156,6 +161,17 @@ function EditorRuta({
     }
   }
 
+  async function asignar(operarioId: string) {
+    setAccionError(null);
+    try {
+      await api.asignarRuta(rutaId, operarioId || null);
+      recargar();
+      onCambio();
+    } catch (e) {
+      setAccionError(mensajeError(e, 'No se pudo asignar la ruta'));
+    }
+  }
+
   async function eliminar(r: RutaDetalle) {
     if (!window.confirm(`¿Eliminar la ruta ${r.nombre}? Sus medidores quedan sin ruta.`)) return;
     try {
@@ -183,6 +199,15 @@ function EditorRuta({
       </div>
 
       {accionError && <ErrorBanner mensaje={accionError} />}
+
+      <Campo etiqueta="Operario responsable (única persona que verá esta ruta en la app)">
+        <Select value={ruta.operario?.id ?? ''} onChange={(e) => void asignar(e.target.value)}>
+          <option value="">Sin asignar</option>
+          {usuarios.datos
+            ?.filter((u) => u.rol === 'OPERARIO' && (u.activo || u.id === ruta.operario?.id))
+            .map((u) => <option key={u.id} value={u.id}>{u.nombre}{u.activo ? '' : ' (inactivo)'}</option>)}
+        </Select>
+      </Campo>
 
       <ol className="space-y-1">
         {items.map((m, i) => (

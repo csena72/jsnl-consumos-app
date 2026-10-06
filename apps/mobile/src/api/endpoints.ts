@@ -1,5 +1,5 @@
 import { Platform } from 'react-native';
-import type { LocalidadApi, LoginResponse, LoteProcesadoApi, RutaMedidorApi, TipoServicio } from '../types';
+import type { LocalidadApi, LoginResponse, LoteProcesadoApi, RutaAsignadaApi, RutaMedidorApi, TipoServicio } from '../types';
 import { api } from './client';
 
 export interface LecturaPayload {
@@ -15,9 +15,14 @@ export async function login(email: string, password: string): Promise<LoginRespo
   return data;
 }
 
+/** Descarga solo las rutas asignadas al usuario del token, aplanadas respetando ordenSecuencia. */
 export async function descargarRuta(): Promise<RutaMedidorApi[]> {
-  const { data } = await api.get<RutaMedidorApi[]>('/lecturas/ruta');
-  return data;
+  const { data } = await api.get<RutaAsignadaApi[]>('/rutas/asignada');
+  return data.flatMap((ruta) => [...ruta.medidores].sort(porSecuencia));
+}
+
+function porSecuencia(a: RutaMedidorApi, b: RutaMedidorApi): number {
+  return (a.ordenSecuencia ?? Number.MAX_SAFE_INTEGER) - (b.ordenSecuencia ?? Number.MAX_SAFE_INTEGER);
 }
 
 export async function sincronizarLote(lecturas: LecturaPayload[]): Promise<LoteProcesadoApi> {
