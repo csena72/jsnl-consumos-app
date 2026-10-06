@@ -4,6 +4,7 @@ import { ActivityIndicator, View } from 'react-native';
 import { colors } from '../components/theme';
 import { NetworkBadge } from '../components/NetworkBadge';
 import { useAuth } from '../context/AuthContext';
+import { AltaMedidorNuevoScreen } from '../screens/AltaMedidorNuevoScreen';
 import { CargarLecturaScreen } from '../screens/CargarLecturaScreen';
 import { LoginScreen } from '../screens/LoginScreen';
 import { RutaLecturasScreen } from '../screens/RutaLecturasScreen';
@@ -36,6 +37,7 @@ export function AppNavigator() {
           <>
             <Stack.Screen name="RutaLecturas" component={RutaLecturasScreen} options={{ title: 'Ruta de lecturas' }} />
             <Stack.Screen name="CargarLectura" component={CargarLecturaScreen} options={{ title: 'Cargar lectura' }} />
+            <Stack.Screen name="AltaMedidorNuevo" component={AltaMedidorNuevoScreen} options={{ title: 'Alta de medidor nuevo' }} />
             <Stack.Screen name="Sincronizacion" component={SincronizacionScreen} options={{ title: 'Sincronización' }} />
           </>
         ) : (

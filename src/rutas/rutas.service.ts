@@ -2,10 +2,12 @@ import { BadRequestException, Injectable, NotFoundException } from '@nestjs/comm
 import { InjectRepository } from '@nestjs/typeorm';
 import { In, Repository } from 'typeorm';
 import { traducirErrorDb } from '../common/db-errors';
+import { Usuario, RolUsuario } from '../usuarios/usuario.entity';
 import { Localidad } from '../localidades/localidad.entity';
 import { EstadoMedidor, Medidor } from '../medidores/medidor.entity';
 import {
   ActualizarRutaDto,
+  AsignarRutaDto,
   CrearRutaDto,
   FiltroRutasDto,
   ReordenarRutaDto,
@@ -24,6 +26,7 @@ export class RutasService {
     const qb = this.rutas
       .createQueryBuilder('ruta')
       .innerJoinAndSelect('ruta.localidad', 'localidad')
+      .leftJoinAndSelect('ruta.operario', 'operario')
       .orderBy('localidad.nombre', 'ASC')
       .addOrderBy('ruta.nombre', 'ASC');
     if (filtro.localidadId) qb.andWhere('ruta.localidadId = :l', { l: filtro.localidadId });
@@ -84,6 +87,20 @@ export class RutasService {
     return this.obtener(id);
   }
 
+  /** Asigna (o desasigna con null) el operario responsable. Solo usuarios OPERARIO activos. */
+  async asignar(id: string, dto: AsignarRutaDto): Promise<RutaDetalleDto> {
+    await this.buscar(id);
+    if (dto.operarioId !== null) {
+      const operario = await this.rutas.manager.findOne(Usuario, { where: { id: dto.operarioId } });
+      if (!operario) throw new NotFoundException('Operario no encontrado');
+      if (operario.rol !== RolUsuario.OPERARIO || !operario.activo) {
+        throw new BadRequestException('El usuario debe ser un operario activo');
+      }
+    }
+    await this.rutas.update({ id }, { operarioId: dto.operarioId });
+    return this.obtener(id);
+  }
+
   /** Elimina la ruta; sus medidores quedan sin ruta (FK ON DELETE SET NULL) pero conservan su localidad. */
   async eliminar(id: string): Promise<void> {
     await this.buscar(id);
@@ -121,7 +138,7 @@ export class RutasService {
   }
 
   private async buscar(id: string): Promise<Ruta> {
-    const ruta = await this.rutas.findOne({ where: { id }, relations: { localidad: true } });
+    const ruta = await this.rutas.findOne({ where: { id }, relations: { localidad: true, operario: true } });
     if (!ruta) throw new NotFoundException('Ruta no encontrada');
     return ruta;
   }
@@ -133,6 +150,7 @@ function aDto(r: Ruta, totalMedidores: number): RutaDto {
     nombre: r.nombre,
     activa: r.activa,
     localidad: { id: r.localidad.id, nombre: r.localidad.nombre },
+    operario: r.operario ? { id: r.operario.id, nombre: r.operario.nombre } : null,
     totalMedidores,
   };
 }

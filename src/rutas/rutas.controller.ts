@@ -13,15 +13,20 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { UsuarioActual } from '../auth/decorators/usuario-actual.decorator';
+import { UsuarioAutenticado } from '../auth/jwt-payload.interface';
+import { LecturasService } from '../lecturas/lecturas.service';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { RolUsuario } from '../usuarios/usuario.entity';
 import {
   ActualizarRutaDto,
+  AsignarRutaDto,
   CrearRutaDto,
   FiltroRutasDto,
   ReordenarRutaDto,
+  RutaAsignadaDto,
   RutaDetalleDto,
   RutaDto,
 } from './dto/ruta.dto';
@@ -35,13 +40,29 @@ import { RutasService } from './rutas.service';
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles(RolUsuario.ADMIN)
 export class RutasController {
-  constructor(private readonly rutas: RutasService) {}
+  constructor(
+    private readonly rutas: RutasService,
+    private readonly lecturas: LecturasService,
+  ) {}
 
   @Get()
   @ApiOperation({ summary: 'Listar rutas por localidad, con su cantidad de medidores' })
   @ApiResponse({ status: 200, type: [RutaDto] })
   listar(@Query() filtro: FiltroRutasDto): Promise<RutaDto[]> {
     return this.rutas.listar(filtro);
+  }
+
+  @Get('asignada')
+  @Roles(RolUsuario.ADMIN, RolUsuario.OPERARIO)
+  @ApiOperation({
+    summary: 'Rutas asignadas al usuario del token, para trabajar offline',
+    description:
+      'Devuelve únicamente las rutas activas cuyo operario es el usuario autenticado, con sus medidores ' +
+      'activos ordenados por ordenSecuencia ASC e incluyendo lectura anterior y promedio histórico.',
+  })
+  @ApiResponse({ status: 200, type: [RutaAsignadaDto] })
+  asignada(@UsuarioActual() usuario: UsuarioAutenticado): Promise<RutaAsignadaDto[]> {
+    return this.lecturas.rutasAsignadas(usuario.id);
   }
 
   @Get(':id')
@@ -68,6 +89,15 @@ export class RutasController {
   @ApiResponse({ status: 409, description: 'Nombre de ruta duplicado en la localidad' })
   actualizar(@Param('id', ParseUUIDPipe) id: string, @Body() dto: ActualizarRutaDto): Promise<RutaDetalleDto> {
     return this.rutas.actualizar(id, dto);
+  }
+
+  @Patch(':id/asignar')
+  @ApiOperation({ summary: 'Asignar la ruta a un operario (o desasignarla con operarioId null)' })
+  @ApiResponse({ status: 200, type: RutaDetalleDto })
+  @ApiResponse({ status: 400, description: 'El usuario no es un operario activo' })
+  @ApiResponse({ status: 404, description: 'Ruta u operario no encontrados' })
+  asignar(@Param('id', ParseUUIDPipe) id: string, @Body() dto: AsignarRutaDto): Promise<RutaDetalleDto> {
+    return this.rutas.asignar(id, dto);
   }
 
   @Put(':id/orden')

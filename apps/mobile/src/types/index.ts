@@ -1,3 +1,7 @@
+export type TipoServicio = 'ENERGIA' | 'AGUA';
+
+export const ETIQUETA_SERVICIO: Record<TipoServicio, string> = { ENERGIA: 'Luz', AGUA: 'Agua' };
+
 export type RolUsuario = 'ADMIN' | 'OPERARIO';
 
 export interface Usuario {
@@ -16,13 +20,26 @@ export interface LoginResponse {
 export interface RutaMedidorApi {
   medidorId: string;
   numeroSerie: string;
-  tipoServicio: string;
+  tipoServicio: TipoServicio;
+  numeroCaja: string | null;
+  localidadId: string | null;
+  localidad: string | null;
+  ruta: string | null;
+  ordenSecuencia: number | null;
   socioId: string;
   numeroSocio: number;
   nombreCompleto: string;
   direccion: string;
   lecturaAnterior: number | null;
   promedioHistorico: number | null;
+}
+
+/** Respuesta de GET /rutas/asignada: solo las rutas del usuario logueado, medidores por ordenSecuencia ASC. */
+export interface RutaAsignadaApi {
+  id: string;
+  nombre: string;
+  localidad: { id: string; nombre: string };
+  medidores: RutaMedidorApi[];
 }
 
 export interface SocioLocal {
@@ -36,6 +53,10 @@ export interface SocioLocal {
 export interface MedidorLocal {
   id: string;
   numeroMedidor: string;
+  tipoServicio: TipoServicio;
+  numeroCaja: string | null;
+  localidadId: string | null;
+  ordenSecuencia: number | null;
   lecturaAnterior: number | null;
   promedioHistorico: number | null;
 }
@@ -44,6 +65,12 @@ export interface MedidorLocal {
 export interface ItemRuta {
   idMedidor: string;
   numeroMedidor: string;
+  tipoServicio: TipoServicio;
+  numeroCaja: string | null;
+  localidadId: string | null;
+  localidadNombre: string | null;
+  rutaNombre: string | null;
+  ordenSecuencia: number | null;
   lecturaAnterior: number | null;
   promedioHistorico: number | null;
   idSocio: string;
@@ -98,4 +125,49 @@ export interface ResultadoSync {
   lecturasRechazadas: number;
   fotosSubidas: number;
   fotosFallidas: number;
+  medidoresNuevosEnviados: number;
+  medidoresNuevosFallidos: number;
 }
+
+/** Item de `GET /api/localidades`. */
+export interface LocalidadApi {
+  id: string;
+  nombre: string;
+}
+
+export interface FiltroRuta {
+  localidadId: string | null;
+  tipoServicio: TipoServicio | null;
+}
+
+export interface MedidorNuevoPendiente {
+  idLocal: number;
+  numeroSerie: string;
+  socioId: string | null;
+  tipoServicio: TipoServicio;
+  localidadId: string | null;
+  numeroCaja: string | null;
+  direccionReferencia: string | null;
+  lecturaInicial: number | null;
+  observaciones: string | null;
+  fotoPathLocal: string;
+  fechaCreacion: string;
+  sincronizado: boolean;
+  /** UUID de la solicitud en la API una vez creada (permite reintentar solo la foto). */
+  idRemoto: string | null;
+  fotoSubida: boolean;
+  errorSync: string | null;
+}
+
+export type NuevoMedidorPendiente = Pick<
+  MedidorNuevoPendiente,
+  | 'numeroSerie'
+  | 'socioId'
+  | 'tipoServicio'
+  | 'localidadId'
+  | 'numeroCaja'
+  | 'direccionReferencia'
+  | 'lecturaInicial'
+  | 'observaciones'
+  | 'fotoPathLocal'
+>;

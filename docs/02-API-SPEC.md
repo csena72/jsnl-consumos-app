@@ -8,7 +8,7 @@
 ---
 
 ## 2. Sincronización Móvil (`/api/lecturas`)
-* `GET /api/lecturas/ruta` (ADMIN u OPERARIO): descarga los medidores activos para trabajar offline.
+* `GET /api/lecturas/ruta` (ADMIN u OPERARIO): medidores de las rutas asignadas al usuario del token (lista plana de `GET /api/rutas/asignada`).
   * **Response:** `[{ "medidorId", "numeroSerie", "tipoServicio", "socioId", "numeroSocio", "nombreCompleto", "direccion", "lecturaAnterior", "promedioHistorico" }]`. `promedioHistorico` es el consumo promedio entre lecturas consecutivas (`null` sin historial suficiente).
 * `POST /api/lecturas/sincronizar-lote`
   * **Headers:** `Authorization: Bearer <JWT>`
@@ -43,8 +43,8 @@ Todos requieren `Authorization: Bearer <JWT>` y rol `ADMIN`. Documentación inte
 * `GET /api/lecturas/atipicas?estado=PENDIENTE|APROBADA|RECHAZADA`: lecturas con desvío > 40%, con socio, medidor, operario y `fotografiaUrl`.
 * `PATCH /api/lecturas/:id/aprobar`: body opcional `{ "comentario": "..." }`. 400 si no es atípica, 409 si ya fue revisada.
 * `PATCH /api/lecturas/:id/rechazar`: ídem; la lectura queda fuera de la facturación.
-* `GET /api/lecturas/exportar?periodo=AAAAMM`: CSV (UTF-8 con BOM) para facturación. Excluye rechazadas y atípicas sin aprobar.
-* `POST /api/lecturas/:id/evidencia` (ADMIN u OPERARIO): `multipart/form-data`, campo `foto` (JPG/PNG, máx. 5 MB). Las fotos se sirven en `/uploads/<archivo>`.
+* `GET /api/lecturas/exportar?periodo=AAAAMM&filtro=TODAS|ATIPICAS|PROCESADAS`: CSV (UTF-8 con BOM). `TODAS`: padrón completo del periodo; `ATIPICAS`: solo desvío > 40%; `PROCESADAS` (default): validadas/correctas, excluye rechazadas y atípicas sin aprobar.
+* `POST /api/lecturas/:id/evidencia` (ADMIN u OPERARIO): `multipart/form-data`, campo `foto` (JPG/PNG, máx. 5 MB). Las fotos se guardan en `./uploads` y se sirven en `/uploads/<archivo>` con `ServeStaticModule`. En Render (disco efímero) se pierden al re-desplegar.
 
 ### Reclamos (`/api/reclamos`)
 * `GET /api/reclamos?estado=PENDIENTE|EN_PROCESO|RESUELTO&tipoReclamo=...&socioId=...`: más recientes primero, con socio, lectura y `fotoUrl`.
@@ -68,6 +68,8 @@ Todos requieren `Authorization: Bearer <JWT>` y rol `ADMIN`. Documentación inte
 
 ### Rutas (`/api/rutas`)
 * `GET /api/rutas?localidadId=&activa=`, `GET /api/rutas/:id` (medidores en orden de lectura), `POST`, `PATCH /:id`, `DELETE /:id` (los medidores quedan sin ruta).
+* `GET /api/rutas/asignada` (ADMIN u OPERARIO): únicamente las rutas activas cuyo operario es el `userId` del JWT, con sus medidores (lectura anterior y promedio histórico) ordenados por `ordenSecuencia ASC`.
+* `PATCH /api/rutas/:id/asignar` (ADMIN): `{ "operarioId": "<uuid>" | null }` asigna o desasigna el operario responsable (debe ser un usuario OPERARIO activo).
 * `PUT /api/rutas/:id/orden`: `{ "medidorIds": [...] }` define el conjunto y la secuencia física de lectura (`ordenSecuencia` = posición + 1).
 * `GET /api/lecturas/ruta` (usado por la app móvil) ahora incluye `numeroCaja`, `localidad`, `ruta` y `ordenSecuencia`, y llega ordenada por localidad, ruta y secuencia.
 

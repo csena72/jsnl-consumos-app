@@ -1,7 +1,14 @@
 import { useState } from 'react';
 import type { FormEvent } from 'react';
 import { api } from '../api';
-import { ErrorBanner } from '../components/ui';
+import { ErrorBanner, Select } from '../components/ui';
+import type { FiltroExportacion } from '../types';
+
+const REPORTES: { valor: FiltroExportacion; etiqueta: string; descripcion: string }[] = [
+  { valor: 'PROCESADAS', etiqueta: 'Procesadas correctamente', descripcion: 'Lecturas validadas, listas para facturar. Quedan fuera las rechazadas y las atípicas sin aprobar.' },
+  { valor: 'ATIPICAS', etiqueta: 'Atípicas', descripcion: 'Solo las lecturas con desvío mayor al 40%, cualquiera sea su estado de revisión.' },
+  { valor: 'TODAS', etiqueta: 'Todas', descripcion: 'Padrón completo de lecturas del período, sin excluir ninguna.' },
+];
 
 function periodoActual(): string {
   const hoy = new Date();
@@ -10,6 +17,7 @@ function periodoActual(): string {
 
 export function Exportar() {
   const [periodo, setPeriodo] = useState(periodoActual);
+  const [filtro, setFiltro] = useState<FiltroExportacion>('PROCESADAS');
   const [error, setError] = useState<string | null>(null);
   const [descargando, setDescargando] = useState(false);
 
@@ -18,11 +26,11 @@ export function Exportar() {
     setDescargando(true);
     setError(null);
     try {
-      const blob = await api.exportarCsv(periodo);
+      const blob = await api.exportarCsv(periodo, filtro);
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `lecturas-${periodo}.csv`;
+      a.download = `lecturas-${filtro.toLowerCase()}-${periodo}.csv`;
       a.click();
       URL.revokeObjectURL(url);
     } catch (err) {
@@ -36,8 +44,7 @@ export function Exportar() {
     <div className="max-w-lg space-y-4">
       <h1 className="text-2xl font-semibold">Exportar para facturación</h1>
       <p className="text-sm text-slate-600">
-        Descarga el consolidado del período en CSV (compatible con Excel). Quedan fuera las lecturas
-        rechazadas y las atípicas que todavía no fueron aprobadas.
+        Descargá el reporte del período en CSV (compatible con Excel). Elegí qué lecturas incluir.
       </p>
       {error && <ErrorBanner mensaje={error} />}
       <form onSubmit={onSubmit} className="flex flex-wrap items-end gap-3 rounded-lg border border-slate-200 bg-white p-4">
@@ -53,6 +60,12 @@ export function Exportar() {
             className="mt-1 block w-36 rounded border border-slate-300 px-3 py-2"
           />
         </label>
+        <label className="text-sm">
+          Tipo de reporte
+          <Select value={filtro} onChange={(e) => setFiltro(e.target.value as FiltroExportacion)} className="mt-1 w-64">
+            {REPORTES.map((r) => <option key={r.valor} value={r.valor}>{r.etiqueta}</option>)}
+          </Select>
+        </label>
         <button
           type="submit"
           disabled={descargando}
@@ -61,6 +74,7 @@ export function Exportar() {
           {descargando ? 'Generando…' : 'Descargar CSV'}
         </button>
       </form>
+      <p className="text-xs text-slate-500">{REPORTES.find((r) => r.valor === filtro)?.descripcion}</p>
     </div>
   );
 }

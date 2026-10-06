@@ -1,4 +1,13 @@
-import { subirEvidencia, sincronizarLote, type LecturaPayload } from '../api/endpoints';
+import axios from 'axios';
+import { mensajeDeError } from '../api/client';
+import {
+  reportarMedidorNuevo,
+  sincronizarLote,
+  subirEvidencia,
+  subirFotoMedidorNuevo,
+  type LecturaPayload,
+  type MedidorNuevoPayload,
+} from '../api/endpoints';
 import {
   asignarLote,
   crearLote,
@@ -8,7 +17,13 @@ import {
   registrarResultadoLote,
   type ResultadoLecturaSync,
 } from '../database/lecturasRepository';
-import type { ResultadoSync } from '../types';
+import {
+  listarNuevosPorEnviar,
+  marcarNuevoFotoSubida,
+  marcarNuevoRechazado,
+  marcarNuevoSincronizado,
+} from '../database/medidoresNuevosRepository';
+import type { MedidorNuevoPendiente, ResultadoSync } from '../types';
 
 /** Máximo de lecturas por lote que acepta la API. */
 const TAMANO_LOTE = 500;
@@ -34,6 +49,8 @@ async function ejecutar(): Promise<ResultadoSync> {
     lecturasRechazadas: 0,
     fotosSubidas: 0,
     fotosFallidas: 0,
+    medidoresNuevosEnviados: 0,
+    medidoresNuevosFallidos: 0,
   };
 
   const pendientes = await listarPendientes();
@@ -83,5 +100,53 @@ async function ejecutar(): Promise<ResultadoSync> {
     }
   }
 
+  await sincronizarMedidoresNuevos(resultado);
   return resultado;
+}
+
+/** La API no tiene campos para socio ni lectura inicial: viajan en las observaciones para el administrador. */
+function aPayload(m: MedidorNuevoPendiente): MedidorNuevoPayload {
+  const notas = [
+    m.socioId ? `Socio informado: ${m.socioId}` : null,
+    m.lecturaInicial !== null ? `Lectura inicial: ${m.lecturaInicial}` : null,
+    m.observaciones,
+  ].filter((n): n is string => Boolean(n));
+  return {
+    numeroSerie: m.numeroSerie,
+    tipoServicio: m.tipoServicio,
+    ...(m.numeroCaja ? { numeroCaja: m.numeroCaja } : {}),
+    ...(m.localidadId ? { localidadId: m.localidadId } : {}),
+    ...(m.direccionReferencia ? { direccionReferencia: m.direccionReferencia } : {}),
+    ...(notas.length ? { observaciones: notas.join('\n') } : {}),
+  };
+}
+
+/** Un 4xx (salvo 401/408/429) es un rechazo definitivo de la API; todo lo demás se reintenta luego. */
+function esRechazoDefinitivo(error: unknown): boolean {
+  if (!axios.isAxiosError(error) || !error.response) return false;
+  const { status } = error.response;
+  return status >= 400 && status < 500 && status !== 401 && status !== 408 && status !== 429;
+}
+
+/** Paso 1: crea la solicitud (JSON). Paso 2: sube la foto con el id devuelto. Cada paso se reintenta por separado. */
+async function sincronizarMedidoresNuevos(resultado: ResultadoSync): Promise<void> {
+  for (const m of await listarNuevosPorEnviar()) {
+    try {
+      let idRemoto = m.idRemoto;
+      if (!m.sincronizado || !idRemoto) {
+        idRemoto = (await reportarMedidorNuevo(aPayload(m))).id;
+        await marcarNuevoSincronizado(m.idLocal, idRemoto);
+      }
+      if (!m.fotoSubida) {
+        await subirFotoMedidorNuevo(idRemoto, m.fotoPathLocal);
+        await marcarNuevoFotoSubida(m.idLocal);
+      }
+      resultado.medidoresNuevosEnviados += 1;
+    } catch (error) {
+      if (esRechazoDefinitivo(error) && !m.sincronizado) {
+        await marcarNuevoRechazado(m.idLocal, mensajeDeError(error));
+      }
+      resultado.medidoresNuevosFallidos += 1;
+    }
+  }
 }

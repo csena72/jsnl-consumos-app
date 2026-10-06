@@ -1,6 +1,7 @@
 import type {
   EstadoPendienteAlta,
   EstadoReclamo,
+  FiltroExportacion,
   EstadoRevision,
   LecturaAtipica,
   Localidad,
@@ -144,6 +145,8 @@ export const api = {
   crearRuta: (datos: Cuerpo) => json<RutaDetalle>('/rutas', enviar('POST', datos)),
   editarRuta: (id: string, datos: Cuerpo) => json<RutaDetalle>(`/rutas/${id}`, patch(datos)),
   eliminarRuta: (id: string) => vacio(`/rutas/${id}`, { method: 'DELETE' }),
+  asignarRuta: (id: string, operarioId: string | null) =>
+    json<RutaDetalle>(`/rutas/${id}/asignar`, patch({ operarioId })),
   ordenarRuta: (id: string, medidorIds: string[]) =>
     json<RutaDetalle>(`/rutas/${id}/orden`, enviar('PUT', { medidorIds })),
 
@@ -158,8 +161,8 @@ export const api = {
     json<MedidorNuevo>(`/medidores-nuevos/${id}/aprobar`, enviar('POST', datos)),
   rechazarMedidorNuevo: (id: string, motivo: string) =>
     json<MedidorNuevo>(`/medidores-nuevos/${id}/rechazar`, enviar('POST', { motivo })),
-  exportarCsv: async (periodo: string): Promise<Blob> =>
-    (await request(`/lecturas/exportar?periodo=${encodeURIComponent(periodo)}`)).blob(),
+  exportarCsv: async (periodo: string, filtro: FiltroExportacion): Promise<Blob> =>
+    (await request(`/lecturas/exportar${query({ periodo, filtro })}`)).blob(),
 };
 
 /** Las fotos viven en /uploads (sin prefijo /api) y las sirve la propia API. */

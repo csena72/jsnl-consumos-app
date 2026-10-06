@@ -26,6 +26,24 @@ export class PeriodoQueryDto {
   periodo: string;
 }
 
+export enum FiltroExportacion {
+  TODAS = 'TODAS',
+  ATIPICAS = 'ATIPICAS',
+  PROCESADAS = 'PROCESADAS',
+}
+
+export class ExportarQueryDto extends PeriodoQueryDto {
+  @ApiPropertyOptional({
+    enum: FiltroExportacion,
+    default: FiltroExportacion.PROCESADAS,
+    description:
+      'TODAS: padrón completo del periodo · ATIPICAS: solo desvío > 40% · PROCESADAS: validadas/correctas (default)',
+  })
+  @IsOptional()
+  @IsEnum(FiltroExportacion)
+  filtro?: FiltroExportacion;
+}
+
 export class ResumenQueryDto {
   @ApiPropertyOptional({ example: '202610', description: 'Formato AAAAMM. Por defecto, todos' })
   @IsOptional()

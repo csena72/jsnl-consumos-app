@@ -120,6 +120,7 @@ export interface Ruta {
   nombre: string;
   activa: boolean;
   localidad: Ref;
+  operario: Ref | null;
   totalMedidores: number;
 }
 
@@ -137,6 +138,8 @@ export interface RutaMedidor {
 export interface RutaDetalle extends Ruta {
   medidores: RutaMedidor[];
 }
+
+export type FiltroExportacion = 'TODAS' | 'ATIPICAS' | 'PROCESADAS';
 
 export interface UsuarioAdmin extends Usuario {
   activo: boolean;

@@ -16,7 +16,7 @@ interface SyncValue {
   sincronizar: () => Promise<void>;
 }
 
-const VACIO: ContadoresSync = { lecturasPendientes: 0, fotosPendientes: 0, lotesPendientes: 0, lecturasConError: 0 };
+const VACIO: ContadoresSync = { lecturasPendientes: 0, fotosPendientes: 0, lotesPendientes: 0, lecturasConError: 0, nuevosPendientes: 0 };
 
 const SyncContext = createContext<SyncValue | null>(null);
 

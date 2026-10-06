@@ -12,7 +12,7 @@ import { crearLectura } from '../database/lecturasRepository';
 import { obtenerItemRuta } from '../database/rutaRepository';
 import type { RootStackParamList } from '../navigation/types';
 import { guardarFotoLocal } from '../services/PhotoService';
-import type { ItemRuta } from '../types';
+import { ETIQUETA_SERVICIO, type ItemRuta } from '../types';
 import { calcularConsumo, calcularDesvio, esConsumoAtipico, parsearLectura, periodoActual } from '../utils/consumo';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'CargarLectura'>;
@@ -125,7 +125,10 @@ export function CargarLecturaScreen({ route, navigation }: Props) {
             #{item.numeroSocio} · {item.nombreSocio}
           </Text>
           <Text style={styles.dato}>{item.direccion}</Text>
-          <Text style={styles.dato}>Medidor: {item.numeroMedidor}</Text>
+          <Text style={styles.dato}>
+            {ETIQUETA_SERVICIO[item.tipoServicio]} · Caja {item.numeroCaja ?? 'sin número'} · Medidor {item.numeroMedidor}
+          </Text>
+          {item.ordenSecuencia !== null ? <Text style={styles.dato}>Orden de recorrido: {item.ordenSecuencia}</Text> : null}
           <Text style={styles.dato}>Lectura anterior: {anterior ?? 'sin dato'}</Text>
           <Text style={styles.dato}>
             Consumo promedio: {item.promedioHistorico !== null ? item.promedioHistorico : 'sin historial'}
