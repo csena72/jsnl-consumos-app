@@ -26,7 +26,7 @@ import { UsuarioActual } from '../auth/decorators/usuario-actual.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { UsuarioAutenticado } from '../auth/jwt-payload.interface';
-import { opcionesSubidaFoto, swaggerBodyFoto } from '../common/uploads';
+import { guardarFoto, opcionesSubidaFoto, swaggerBodyFoto } from '../common/uploads';
 import { RolUsuario } from '../usuarios/usuario.entity';
 import {
   ActualizarEstadoReclamoDto,
@@ -97,11 +97,11 @@ export class ReclamosController {
   @ApiResponse({ status: 400, description: 'Archivo ausente o formato no permitido' })
   @ApiResponse({ status: 404, description: 'Reclamo no encontrado' })
   @UseInterceptors(FileInterceptor('foto', opcionesSubidaFoto))
-  subirFoto(
+  async subirFoto(
     @Param('id', ParseUUIDPipe) id: string,
     @UploadedFile() foto: Express.Multer.File | undefined,
   ): Promise<{ id: string; fotoUrl: string }> {
     if (!foto) throw new BadRequestException('Falta el archivo en el campo "foto"');
-    return this.reclamos.adjuntarFoto(id, `/uploads/${foto.filename}`);
+    return this.reclamos.adjuntarFoto(id, await guardarFoto(foto));
   }
 }

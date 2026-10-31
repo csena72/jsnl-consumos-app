@@ -166,7 +166,8 @@ export const api = {
     (await request(`/lecturas/exportar${query({ periodo, filtro })}`)).blob(),
 };
 
-/** Las fotos viven en /uploads (sin prefijo /api) y las sirve la propia API. */
+/** Las fotos nuevas son URLs absolutas (Cloudinary); las viejas y las de desarrollo viven en /uploads de la API. */
 export function urlFoto(ruta: string | null): string | null {
-  return ruta ? `${API_URL}${ruta}` : null;
+  if (!ruta) return null;
+  return /^https?:\/\//.test(ruta) ? ruta : `${API_URL}${ruta}`;
 }
