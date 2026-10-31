@@ -259,8 +259,8 @@ function AgregarMedidor({
   async function buscar() {
     setError(null);
     try {
-      const pagina = await api.medidores({ localidadId, q: q.trim(), estado: 'ACTIVO', limit: 30 });
-      setCandidatos(pagina.data.filter((m) => !m.ruta));
+      const pagina = await api.medidores({ localidadId, q: q.trim(), estado: 'ACTIVO', sinRuta: true, limit: 30 });
+      setCandidatos(pagina.data);
     } catch (e) {
       setError(mensajeError(e, 'No se pudo buscar'));
     }

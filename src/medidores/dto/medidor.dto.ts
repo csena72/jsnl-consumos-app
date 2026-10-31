@@ -1,7 +1,7 @@
 import { ApiProperty, ApiPropertyOptional, OmitType, PartialType } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
-import { IsEnum, IsInt, IsOptional, IsString, IsUUID, MaxLength, Min, MinLength } from 'class-validator';
-import { PaginacionQueryDto } from '../../common/paginacion';
+import { IsBoolean, IsEnum, IsInt, IsOptional, IsString, IsUUID, MaxLength, Min, MinLength } from 'class-validator';
+import { PaginacionQueryDto, aBooleano } from '../../common/paginacion';
 import { EstadoMedidor, EstadoPrecinto, TipoServicio } from '../medidor.entity';
 
 export class CrearMedidorDto {
@@ -82,6 +82,12 @@ export class FiltroMedidoresDto extends PaginacionQueryDto {
   @IsOptional()
   @IsUUID()
   rutaId?: string;
+
+  @ApiPropertyOptional({ description: 'true: solo medidores que no pertenecen a ninguna ruta' })
+  @IsOptional()
+  @Transform(aBooleano)
+  @IsBoolean()
+  sinRuta?: boolean;
 
   @ApiPropertyOptional({ enum: EstadoMedidor, description: 'Por defecto, solo activos' })
   @IsOptional()

@@ -131,6 +131,7 @@ export const api = {
     tipoServicio?: string;
     localidadId?: string;
     rutaId?: string;
+    sinRuta?: boolean;
     socioId?: string;
     estado?: string;
     page?: number;
