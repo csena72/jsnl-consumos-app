@@ -38,6 +38,7 @@ export class MedidoresService {
     if (filtro.socioId) qb.andWhere('medidor.socioId = :s', { s: filtro.socioId });
     if (filtro.localidadId) qb.andWhere('medidor.localidadId = :l', { l: filtro.localidadId });
     if (filtro.rutaId) qb.andWhere('medidor.rutaId = :r', { r: filtro.rutaId });
+    if (filtro.sinRuta) qb.andWhere('medidor.rutaId IS NULL');
     if (filtro.q) {
       qb.andWhere('(medidor.numeroSerie ILIKE :q OR medidor.numeroCaja ILIKE :q)', { q: `%${filtro.q}%` });
     }
