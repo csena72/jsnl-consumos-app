@@ -29,7 +29,7 @@ import { UsuarioActual } from '../auth/decorators/usuario-actual.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { UsuarioAutenticado } from '../auth/jwt-payload.interface';
-import { opcionesSubidaFoto, swaggerBodyFoto } from '../common/uploads';
+import { guardarFoto, opcionesSubidaFoto, swaggerBodyFoto } from '../common/uploads';
 import { RolUsuario } from '../usuarios/usuario.entity';
 import {
   ExportarQueryDto,
@@ -156,7 +156,7 @@ export class LecturasController {
   @ApiResponse({ status: 400, description: 'Archivo ausente o formato no permitido' })
   @ApiResponse({ status: 404, description: 'Lectura no encontrada' })
   @UseInterceptors(FileInterceptor('foto', opcionesSubidaFoto))
-  subirEvidencia(
+  async subirEvidencia(
     @Param('id', ParseUUIDPipe) id: string,
     @UploadedFile() foto: Express.Multer.File | undefined,
     @UsuarioActual() usuario: UsuarioAutenticado,
@@ -164,6 +164,6 @@ export class LecturasController {
     if (!foto) {
       throw new BadRequestException('Falta el archivo en el campo "foto"');
     }
-    return this.lecturas.adjuntarEvidencia(id, `/uploads/${foto.filename}`, usuario);
+    return this.lecturas.adjuntarEvidencia(id, await guardarFoto(foto), usuario);
   }
 }
